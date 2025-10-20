@@ -1,0 +1,153 @@
+/* --- 基本スタイル --- */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f2f5;
+    color: #333;
+}
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2列のグリッドレイアウト */
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.card {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+h1 {
+    grid-column: 1 / -1; /* タイトルを全幅に */
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+    border-bottom: 4px solid #e74c3c;
+    padding-bottom: 10px;
+}
+h2 {
+    color: #e74c3c;
+    border-left: 5px solid #e74c3c;
+    padding-left: 10px;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+/* --- 筋トレ飯スタイル --- */
+.meal-detail {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+}
+.meal-detail strong {
+    color: #2980b9;
+}
+
+/* --- 筋トレログスタイル --- */
+.log-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+.log-input-group label {
+    font-weight: bold;
+    white-space: nowrap; /* テキストの折り返しを防ぐ */
+}
+.log-input-group select, .log-input-group input[type="number"] {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+#add-log-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #2ecc71; /* 緑色のボタン */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+#add-log-btn:hover {
+    background-color: #27ae60;
+}
+.log-entry {
+    border-bottom: 1px dashed #ccc;
+    padding: 10px 0;
+}
+.log-entry:last-child {
+    border-bottom: none;
+}
+.log-entry p {
+    margin: 5px 0;
+}
+
+/* --- グラフスタイル --- */
+.graph-section {
+    grid-column: 1 / -1; /* グラフセクションを全幅に */
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* グラフを2列に分割 */
+    gap: 20px;
+}
+.graph-card {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.graph-area {
+    height: 250px; /* グラフエリアの高さ設定 */
+    background-color: #ecf0f1;
+    border-radius: 8px;
+    position: relative;
+    padding: 15px;
+}
+.bar-container {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    gap: 5px;
+    padding-top: 20px;
+    box-sizing: border-box;
+}
+.bar {
+    width: 10%;
+    background-color: #3498db;
+    transition: height 0.5s ease;
+    position: relative;
+    border-radius: 3px 3px 0 0;
+}
+.bar.warning { /* 混雑時の色 */
+    background-color: #e74c3c;
+}
+.bar-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #555;
+}
+.bar-value {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #3498db;
+}
+.bar.warning .bar-value {
+     color: #e74c3c;
+}
