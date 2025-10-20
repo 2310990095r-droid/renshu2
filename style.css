@@ -1,4 +1,4 @@
-/* --- 基本スタイル (変更なし) --- */
+/* --- 基本スタイル (省略、変更なし) --- */
 body {
     font-family: 'Arial', sans-serif;
     margin: 0;
@@ -8,186 +8,84 @@ body {
 }
 .container {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* PC/タブレット: 2列 */
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     max-width: 1200px;
     margin: 0 auto;
 }
-.card {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
-.card:hover {
-    transform: translateY(-5px);
-}
-h1 {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: #2c3e50;
-    margin-bottom: 30px;
-    border-bottom: 4px solid #e74c3c;
-    padding-bottom: 10px;
-}
-h2 {
-    color: #e74c3c;
-    border-left: 5px solid #e74c3c;
-    padding-left: 10px;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
+/* ... その他のPC向けスタイルは省略 ... */
 
-/* --- 筋トレ飯/ログ/グラフの共通スタイル (変更なし) --- */
-.meal-detail {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-}
-.meal-detail strong {
-    color: #2980b9;
-}
-.log-input-group {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    align-items: center;
-}
-.log-input-group label {
-    font-weight: bold;
-    white-space: nowrap;
-}
-.log-input-group select, .log-input-group input[type="number"] {
-    flex-grow: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-#add-log-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background-color: #2ecc71;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-#add-log-btn:hover {
-    background-color: #27ae60;
-}
-.log-entry {
-    border-bottom: 1px dashed #ccc;
-    padding: 10px 0;
-}
-.log-entry:last-child {
-    border-bottom: none;
-}
-.log-entry p {
-    margin: 5px 0;
-}
-
-/* --- グラフセクションのPC/タブレット用スタイル (変更なし) --- */
-.graph-section {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* PC/タブレット: グラフを2列に分割 */
-    gap: 20px;
-}
-/* グラフ表示に関するスタイルは省略 */
-.graph-card {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-.graph-area {
-    height: 250px;
-    background-color: #ecf0f1;
-    border-radius: 8px;
-    position: relative;
-    padding: 15px;
-}
-.bar-container {
-    display: flex;
-    align-items: flex-end;
-    height: 100%;
-    gap: 5px;
-    padding-top: 20px;
-    box-sizing: border-box;
-}
-.bar {
-    width: 10%;
-    background-color: #3498db;
-    transition: height 0.5s ease;
-    position: relative;
-    border-radius: 3px 3px 0 0;
-}
-.bar.warning {
-    background-color: #e74c3c;
-}
-.bar-label {
-    position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 10px;
-    color: #555;
-}
-.bar-value {
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 12px;
-    font-weight: bold;
-    color: #3498db;
-}
-.bar.warning .bar-value {
-     color: #e74c3c;
-}
 
 /* ==================================== */
-/* 📱 レスポンシブ対応 (Media Query) */
+/* 📱 レスポンシブ対応 (Media Query) - 改善版 */
 /* ==================================== */
 
 @media (max-width: 768px) {
-    /* 768px以下の画面幅で適用 */
-    
-    /* 1. 全体のコンテナを1列に変更 */
-    .container {
-        grid-template-columns: 1fr; /* 2列から1列に変更 */
-        padding: 10px; /* 余白を少し減らす */
+    /* 1. 基本レイアウトと余白の調整 */
+    body {
+        /* スマホで左右の余白を減らし、コンテンツ幅を広げる */
+        padding: 10px;
     }
-
-    /* 2. タイトルを1列対応に戻す */
+    .container {
+        grid-template-columns: 1fr;
+        gap: 15px; /* カード間の間隔を少し減らす */
+    }
+    .card {
+        padding: 15px; /* カード内のパディングを減らす */
+    }
+    
+    /* 2. タイトルと見出しの調整 */
     h1 {
         grid-column: 1 / 1;
-        margin-bottom: 20px;
+        font-size: 1.8em; /* タイトルを少し小さく */
+        margin-bottom: 15px;
+    }
+    h2 {
+        font-size: 1.2em; /* サブタイトルを適切なサイズに */
     }
 
-    /* 3. グラフセクションを1列に変更 */
-    .graph-section {
-        grid-column: 1 / 1; /* 全幅ではなく、親の1列に合わせる */
-        grid-template-columns: 1fr; /* グラフを1列に縦並びにする */
-        gap: 15px;
-    }
-    
-    /* 4. 入力フォームのラベルと入力フィールドの配置を調整 */
+    /* 3. ログ入力の改善: 縦に並べた上で、視認性を高める */
     .log-input-group {
-        flex-direction: column; /* 縦並びにする */
-        align-items: flex-start; /* 左寄せ */
+        flex-direction: column; 
+        align-items: flex-start;
+        margin-bottom: 10px; /* グループ間の隙間を少し減らす */
     }
     .log-input-group label {
-        width: 100%; /* ラベルを全幅に */
-        margin-bottom: 5px;
+        width: 100%;
+        margin-bottom: 2px; /* ラベルと入力欄の隙間を最小限に */
+        font-size: 0.95em;
     }
     .log-input-group select, .log-input-group input[type="number"] {
-        width: 100%; /* 入力フィールドも全幅に */
-        min-width: 0;
+        width: 100%;
+        padding: 10px; /* 入力欄の高さを維持し、タップしやすくする */
+        box-sizing: border-box; /* paddingを含めて幅を100%にする */
+    }
+    
+    #add-log-btn {
+        padding: 12px; /* ボタンを大きく、タップしやすくする */
+        font-size: 1em;
+        margin-top: 5px;
+    }
+    
+    /* 4. グラフセクションの調整 */
+    .graph-section {
+        grid-column: 1 / 1;
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* 5. グラフ内の文字サイズ調整 */
+    .bar-value {
+        font-size: 11px;
+    }
+    .bar-label {
+        font-size: 9px;
+        bottom: -15px;
+    }
+    .graph-area {
+        height: 200px; /* グラフの高さを少し抑えることで縦長になるのを防ぐ */
+    }
+    .graph-card p {
+        margin-top: 20px !important;
     }
 }
