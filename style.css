@@ -1,4 +1,4 @@
-/* --- 基本スタイル --- */
+/* --- 基本スタイル (変更なし) --- */
 body {
     font-family: 'Arial', sans-serif;
     margin: 0;
@@ -8,7 +8,7 @@ body {
 }
 .container {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2列のグリッドレイアウト */
+    grid-template-columns: 1fr 1fr; /* PC/タブレット: 2列 */
     gap: 20px;
     max-width: 1200px;
     margin: 0 auto;
@@ -24,7 +24,7 @@ body {
     transform: translateY(-5px);
 }
 h1 {
-    grid-column: 1 / -1; /* タイトルを全幅に */
+    grid-column: 1 / -1;
     text-align: center;
     color: #2c3e50;
     margin-bottom: 30px;
@@ -39,7 +39,7 @@ h2 {
     margin-bottom: 15px;
 }
 
-/* --- 筋トレ飯スタイル --- */
+/* --- 筋トレ飯/ログ/グラフの共通スタイル (変更なし) --- */
 .meal-detail {
     background-color: #f9f9f9;
     padding: 15px;
@@ -48,8 +48,6 @@ h2 {
 .meal-detail strong {
     color: #2980b9;
 }
-
-/* --- 筋トレログスタイル --- */
 .log-input-group {
     display: flex;
     gap: 10px;
@@ -58,7 +56,7 @@ h2 {
 }
 .log-input-group label {
     font-weight: bold;
-    white-space: nowrap; /* テキストの折り返しを防ぐ */
+    white-space: nowrap;
 }
 .log-input-group select, .log-input-group input[type="number"] {
     flex-grow: 1;
@@ -70,7 +68,7 @@ h2 {
     display: block;
     width: 100%;
     padding: 10px;
-    background-color: #2ecc71; /* 緑色のボタン */
+    background-color: #2ecc71;
     color: white;
     border: none;
     border-radius: 4px;
@@ -93,13 +91,14 @@ h2 {
     margin: 5px 0;
 }
 
-/* --- グラフスタイル --- */
+/* --- グラフセクションのPC/タブレット用スタイル (変更なし) --- */
 .graph-section {
-    grid-column: 1 / -1; /* グラフセクションを全幅に */
+    grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: 1fr 1fr; /* グラフを2列に分割 */
+    grid-template-columns: 1fr 1fr; /* PC/タブレット: グラフを2列に分割 */
     gap: 20px;
 }
+/* グラフ表示に関するスタイルは省略 */
 .graph-card {
     background-color: #ffffff;
     padding: 25px;
@@ -107,7 +106,7 @@ h2 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .graph-area {
-    height: 250px; /* グラフエリアの高さ設定 */
+    height: 250px;
     background-color: #ecf0f1;
     border-radius: 8px;
     position: relative;
@@ -128,7 +127,7 @@ h2 {
     position: relative;
     border-radius: 3px 3px 0 0;
 }
-.bar.warning { /* 混雑時の色 */
+.bar.warning {
     background-color: #e74c3c;
 }
 .bar-label {
@@ -150,4 +149,45 @@ h2 {
 }
 .bar.warning .bar-value {
      color: #e74c3c;
+}
+
+/* ==================================== */
+/* 📱 レスポンシブ対応 (Media Query) */
+/* ==================================== */
+
+@media (max-width: 768px) {
+    /* 768px以下の画面幅で適用 */
+    
+    /* 1. 全体のコンテナを1列に変更 */
+    .container {
+        grid-template-columns: 1fr; /* 2列から1列に変更 */
+        padding: 10px; /* 余白を少し減らす */
+    }
+
+    /* 2. タイトルを1列対応に戻す */
+    h1 {
+        grid-column: 1 / 1;
+        margin-bottom: 20px;
+    }
+
+    /* 3. グラフセクションを1列に変更 */
+    .graph-section {
+        grid-column: 1 / 1; /* 全幅ではなく、親の1列に合わせる */
+        grid-template-columns: 1fr; /* グラフを1列に縦並びにする */
+        gap: 15px;
+    }
+    
+    /* 4. 入力フォームのラベルと入力フィールドの配置を調整 */
+    .log-input-group {
+        flex-direction: column; /* 縦並びにする */
+        align-items: flex-start; /* 左寄せ */
+    }
+    .log-input-group label {
+        width: 100%; /* ラベルを全幅に */
+        margin-bottom: 5px;
+    }
+    .log-input-group select, .log-input-group input[type="number"] {
+        width: 100%; /* 入力フィールドも全幅に */
+        min-width: 0;
+    }
 }
