@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addButton.addEventListener('click', function() {
         // 1. 入力値の取得
-        // 選択されたオプションのテキストから種目名のみを取得
         const exerciseName = exerciseSelect.options[exerciseSelect.selectedIndex].text.split(' ')[0]; 
         const weight = weightInput.value;
         const reps = repsSelect.value;
@@ -47,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // ログの詳細
         const detail = document.createElement('p');
-        // 重量0kgまたは空の場合は「自重」と表示
         const weightValue = parseInt(weight);
         const weightDisplay = (weightValue > 0 && !isNaN(weightValue)) ? `${weight}kg` : '自重';
         detail.textContent = `${exerciseName}: ${weightDisplay} × ${reps}回 × ${sets}セット`;
