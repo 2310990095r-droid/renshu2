@@ -7,19 +7,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const pastLogsContainer = document.getElementById('past-logs');
 
     // -----------------------------------------------------
-    // 1. 筋トレ飯のランダム表示機能
+    // 1. 筋トレ飯のランダム表示機能 (候補を大幅に増加)
     // -----------------------------------------------------
     const recommendedMeals = [
-        { name: "鮭の味噌マヨホイル焼き＆玄米", points: ["良質な脂質: 鮭に含まれるDHA・EPA（オメガ3脂肪酸）が回復をサポート。", "複合炭水化物: 玄米でエネルギーを長時間供給し、インスリンを安定化。"] },
         { name: "鶏むね肉とブロッコリーの和風炒め", points: ["高タンパク質: 鶏むね肉で筋肉の材料をたっぷり補給。", "ビタミンC: ブロッコリーで免疫力とコラーゲン生成をサポート。"] },
+        { name: "鮭の味噌マヨホイル焼き＆玄米", points: ["良質な脂質: 鮭に含まれるDHA・EPA（オメガ3脂肪酸）が回復をサポート。", "複合炭水化物: 玄米でエネルギーを長時間供給し、インスリンを安定化。"] },
         { name: "マグロとアボカドのポキ丼", points: ["良質なタンパク質: マグロでアミノ酸を効率よく摂取。", "ミネラル・ビタミンE: アボカドで抗酸化作用とホルモンバランスをサポート。"] },
         { name: "牛赤身肉とキノコのオイスターソース炒め", points: ["鉄分・亜鉛: 牛肉で酸素運搬能力と代謝を向上。", "食物繊維: キノコで腸内環境を整え、栄養吸収を促進。"] },
         { name: "鯖缶と納豆のパワーサラダ", points: ["オメガ3脂肪酸: 鯖缶で炎症を抑え、回復を促進。", "プロバイオティクス: 納豆で腸内環境を改善し、栄養の吸収率を高める。"] },
-        { name: "豚ヒレ肉のソテーとレンズ豆のポタージュ", points: ["ビタミンB1: 豚ヒレ肉で疲労回復と糖質の代謝をサポート。", "複合炭水化物: レンズ豆で持続的なエネルギーと食物繊維を摂取。"] }
+        { name: "豚ヒレ肉のソテーとレンズ豆のポタージュ", points: ["ビタミンB1: 豚ヒレ肉で疲労回復と糖質の代謝をサポート。", "複合炭水化物: レンズ豆で持続的なエネルギーと食物繊維を摂取。"] },
+        { name: "エビとアスパラガスのガーリック炒め", points: ["低脂質・高タンパク質: エビは良質なアミノ酸が豊富で低カロリー。", "葉酸・カリウム: アスパラガスでミネラルバランスを調整。"] },
+        { name: "鶏レバーの甘辛煮とほうれん草の和え物", points: ["鉄分・ビタミンA: 鶏レバーで貧血予防と粘膜の健康を維持。", "ビタミンK・カルシウム: 骨の健康をサポート。"] },
+        { name: "豆腐とわかめの味噌汁＋鶏むね肉の棒棒鶏", points: ["大豆タンパク質: 豆腐で消化吸収のよいタンパク質を摂取。", "セサミン: ごまに含まれる成分が肝機能をサポート。"] },
+        { name: "茹で卵と全粒粉パンのオープンサンド", points: ["完全栄養食: 卵は必須アミノ酸のバランスが完璧。", "低GI・複合炭水化物: 全粒粉パンで血糖値の急上昇を抑える。"] }
     ];
 
     function displayRandomMeal() {
         const mealContainer = document.querySelector('#recommended-meal .meal-detail');
+        // ランダムなインデックスを生成
         const randomIndex = Math.floor(Math.random() * recommendedMeals.length);
         const meal = recommendedMeals[randomIndex];
         
@@ -38,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // -----------------------------------------------------
-    // 2. ログの永続化機能 (localStorageを使用)
+    // 2. ログの永続化機能 (初期サンプルログを削除)
     // -----------------------------------------------------
 
     const LOG_STORAGE_KEY = 'trainingLogs';
@@ -63,20 +68,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // JSON文字列を配列に戻す
             logs = JSON.parse(storedLogs);
         } else {
-            // データがない場合は、初期のサンプルログを設定
-            logs = [
-                { date: '2025/10/06 (月)', part: '胸・三頭筋', detail: 'ベンチプレス: 80kg × 8回 × 3セット' },
-                { date: '2025/10/06 (月)', part: '胸・三頭筋', detail: 'ディップス: 自重 × 10回 × 3セット' },
-                { date: '2025/10/04 (土)', part: '背中・二頭筋', detail: 'デッドリフト: 100kg × 5回 × 3セット' },
-                { date: '2025/10/04 (土)', part: '背中・二頭筋', detail: 'ラットプルダウン: 40kg × 12回 × 3セット' }
-            ];
-            // 初期ログをlocalStorageに保存
-            saveLogs(logs);
+            // ★修正点: localStorageにデータがない場合でも、初期サンプルログを生成しない
+            // logs配列は空のままとなるため、初期画面には何も表示されない
+            // saveLogs(logs)も初回は実行しない
         }
         
         // ログをHTMLに表示
         logs.forEach(log => {
-            appendLogToHTML(log.date, log.part, log.detail, false); // falseはリストの先頭に追加しないことを示す
+            // ロード時はリストの末尾に追加 (履歴順を保つため)
+            appendLogToHTML(log.date, log.part, log.detail, false); 
         });
     }
     
