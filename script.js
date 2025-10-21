@@ -5,11 +5,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const repsSelect = document.getElementById('reps');
     const setsSelect = document.getElementById('sets');
     const pastLogsContainer = document.getElementById('past-logs');
+    const logAnalyticsContainer = document.getElementById('log-analytics');
+
+    const LOG_STORAGE_KEY = 'trainingLogs';
 
     // -----------------------------------------------------
-    // 1. 筋トレ飯のランダム表示機能 (詳細情報を追加)
+    // 1. 筋トレ飯のランダム表示機能 (変更なし)
     // -----------------------------------------------------
     const recommendedMeals = [
+        // 既存の豊富なメニューデータ（省略）
         { name: "鶏むね肉とブロッコリーの和風炒め", calorie: "約450 kcal", recipe: "鶏むね肉とブロッコリーを酒・醤油・生姜で炒める。", points: ["高タンパク質: 鶏むね肉で筋肉の材料をたっぷり補給。", "ビタミンC: ブロッコリーで免疫力とコラーゲン生成をサポート。"] },
         { name: "鮭の味噌マヨホイル焼き＆玄米", calorie: "約550 kcal", recipe: "鮭と野菜を味噌マヨネーズで包みホイルで焼く。玄米と合わせる。", points: ["良質な脂質: 鮭に含まれるDHA・EPA（オメガ3脂肪酸）が回復をサポート。", "複合炭水化物: 玄米でエネルギーを長時間供給し、インスリンを安定化。"] },
         { name: "マグロとアボカドのポキ丼", calorie: "約500 kcal", recipe: "マグロとアボカドを醤油・ごま油で和え、ご飯に乗せる。", points: ["良質なタンパク質: マグロでアミノ酸を効率よく摂取。", "ミネラル・ビタミンE: アボカドで抗酸化作用とホルモンバランスをサポート。"] },
@@ -45,13 +49,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // -----------------------------------------------------
-    // 2. ログの永続化機能と削除機能
+    // 2. ログの永続化・表示・削除機能
     // -----------------------------------------------------
-
-    const LOG_STORAGE_KEY = 'trainingLogs';
     
-    // ローカルストレージからの読み込みと表示
-    loadLogs();
+    // ページロード時に実行
+    function initializeLogSystem() {
+        loadLogs();
+        renderAnalytics(); // ログデータ読み込み後に分析も実行
+        setupAnalyticsTabs(); // タブ切り替えの設定
+    }
+    initializeLogSystem();
 
     function saveLogs(logs) {
         localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
@@ -61,21 +68,22 @@ document.addEventListener('DOMContentLoaded', function() {
         pastLogsContainer.innerHTML = '';
         
         const storedLogs = localStorage.getItem(LOG_STORAGE_KEY);
+        // logsにweight, reps, sets, exerciseValue, partなどの分析に必要な情報も含まれる
         let logs = storedLogs ? JSON.parse(storedLogs) : [];
         
         // ログをHTMLに表示
         logs.forEach(log => {
-            // load時には末尾に追加（履歴の順番通り）
             appendLogToHTML(log, false); 
         });
+        return logs;
     }
     
     // ログエントリをHTMLに追加する共通関数
     function appendLogToHTML(log, prepend = true) {
+        // ... (HTML要素作成ロジックは変更なし) ...
         const newLogEntry = document.createElement('div');
         newLogEntry.classList.add('log-entry');
         
-        // ログIDを要素のデータ属性に保存
         newLogEntry.dataset.logId = log.id; 
 
         const header = document.createElement('strong');
@@ -86,15 +94,12 @@ document.addEventListener('DOMContentLoaded', function() {
         detailP.textContent = log.detail;
         newLogEntry.appendChild(detailP);
 
-        // 削除ボタンの追加
         const deleteBtn = document.createElement('button');
         deleteBtn.classList.add('delete-log-btn');
         deleteBtn.textContent = '削除';
-        // 削除ボタンにイベントリスナーを設定
         deleteBtn.addEventListener('click', handleDeleteLog);
         newLogEntry.appendChild(deleteBtn);
 
-        // 新規ログはリストの先頭に、ロード時のログはリストの末尾に追加
         if (prepend && pastLogsContainer.firstElementChild) {
             pastLogsContainer.insertBefore(newLogEntry, pastLogsContainer.firstElementChild);
         } else {
@@ -102,98 +107,257 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 削除処理の本体
+    // 削除処理の本体（★永続化の確認済み）
     function handleDeleteLog(event) {
-        // ボタンの親要素であるlog-entryからlogIdを取得
         const logEntry = event.target.closest('.log-entry');
-        const logIdToDelete = parseInt(logEntry.dataset.logId);
+        const logIdToDelete = parseInt(logEntry.dataset.logId); 
         
         if (!confirm('このログを削除してもよろしいですか？')) {
             return;
         }
 
+        // 1. localStorageからログを読み込む
         const storedLogs = localStorage.getItem(LOG_STORAGE_KEY);
         let currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
         
-        // 該当IDのログを配列からフィルタリングして削除
+        // 2. 該当IDのログを配列から除外
         const updatedLogs = currentLogs.filter(log => log.id !== logIdToDelete);
         
-        // localStorageを更新
-        saveLogs(updatedLogs);
+        // 3. 削除後の配列をlocalStorageに上書き保存 (永続化)
+        saveLogs(updatedLogs); 
         
-        // 画面上の要素を削除
+        // 4. 画面上の要素を削除
         logEntry.remove();
         
+        // 5. 分析グラフを更新
+        renderAnalytics();
+
         alert('ログを削除しました。');
     }
     
     // -----------------------------------------------------
-    // 3. ログ追加ボタンの処理
+    // 3. ログ記録時の処理
     // -----------------------------------------------------
 
     addButton.addEventListener('click', function() {
         // 1. 入力値の取得
         const exerciseText = exerciseSelect.options[exerciseSelect.selectedIndex].text;
+        const exerciseValue = exerciseSelect.value;
         const exerciseName = exerciseText.split(' ')[0]; 
-        const weight = weightInput.value;
-        const reps = repsSelect.value;
-        const sets = setsSelect.value;
+        const weight = parseInt(weightInput.value);
+        const reps = parseInt(repsSelect.value);
+        const sets = parseInt(setsSelect.value);
         
-        // ログの日付を整形
+        if (isNaN(weight) || weight <= 0 || isNaN(reps) || isNaN(sets)) {
+             alert('重量、回数、セット数は正しく入力してください。');
+             return;
+        }
+
+        // ... (日付、部位判定ロジックは省略) ...
         const now = new Date();
         const dateString = now.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
         const dayOfWeek = now.toLocaleDateString('ja-JP', { weekday: 'short' });
         const fullDate = `${dateString} (${dayOfWeek})`;
         
-        // 種目から大まかな部位を判別 (省略)
         let part = 'その他';
-        const selectedValue = exerciseSelect.value;
-        if (['benchpress', 'incline_press', 'dumbbell_press', 'pec_fly', 'push_up'].includes(selectedValue)) {
+        if (['benchpress', 'incline_press', 'dumbbell_press', 'pec_fly', 'push_up'].includes(exerciseValue)) {
             part = '胸';
-        } else if (['deadlift', 'latpulldown', 'bentover_row', 'seated_row', 'pull_up'].includes(selectedValue)) {
+        } else if (['deadlift', 'latpulldown', 'bentover_row', 'seated_row', 'pull_up'].includes(exerciseValue)) {
             part = '背中';
-        } else if (['squat', 'leg_press', 'romanian_deadlift', 'leg_extension', 'leg_curl', 'calf_raise'].includes(selectedValue)) {
+        } else if (['squat', 'leg_press', 'romanian_deadlift', 'leg_extension', 'leg_curl', 'calf_raise'].includes(exerciseValue)) {
             part = '脚';
-        } else if (['shoulderpress', 'side_raise', 'front_raise', 'reverse_fly'].includes(selectedValue)) {
+        } else if (['shoulderpress', 'side_raise', 'front_raise', 'reverse_fly'].includes(exerciseValue)) {
             part = '肩';
-        } else if (['armcurl', 'triceps_extension', 'hammer_curl', 'cable_pushdown'].includes(selectedValue)) {
+        } else if (['armcurl', 'triceps_extension', 'hammer_curl', 'cable_pushdown'].includes(exerciseValue)) {
             part = '腕';
-        } else if (['crunch', 'leg_raise', 'plank', 'russian_twist'].includes(selectedValue)) {
+        } else if (['crunch', 'leg_raise', 'plank', 'russian_twist'].includes(exerciseValue)) {
             part = '体幹';
         }
 
-        // ログの詳細文字列を生成
-        const weightValue = parseInt(weight);
-        const weightDisplay = (weightValue > 0 && !isNaN(weightValue)) ? `${weight}kg` : '自重';
+        const weightDisplay = (weight > 0) ? `${weight}kg` : '自重';
         const detailString = `${exerciseName}: ${weightDisplay} × ${reps}回 × ${sets}セット`;
 
-        // 3. 新しいログオブジェクトを作成 (一意のIDを追加)
+        // 3. 新しいログオブジェクトを作成 (分析に必要な全データを含める)
         const newLog = {
-            id: Date.now(), // 現在のタイムスタンプをIDとして使用 (ミリ秒単位で一意)
+            id: Date.now(), 
             date: fullDate,
+            exerciseValue: exerciseValue, // 種目の値を追加
+            weight: weight,
+            reps: reps,
+            sets: sets,
             part: part,
             detail: detailString
         };
         
-        // 4. HTMLに表示 (先頭に追加)
-        appendLogToHTML(newLog, true);
-        
-        // 5. localStorageのデータを更新
+        // 4. localStorageのデータを更新
         const currentLogsString = localStorage.getItem(LOG_STORAGE_KEY);
         let currentLogs = currentLogsString ? JSON.parse(currentLogsString) : [];
-        
-        // 新しいログを配列の先頭に追加
         currentLogs.unshift(newLog);
-        
-        // localStorageに保存
         saveLogs(currentLogs);
 
-        // 6. 入力値をリセット
+        // 5. HTMLに表示 (先頭に追加)
+        appendLogToHTML(newLog, true);
+        
+        // 6. 分析グラフを更新
+        renderAnalytics();
+
+        // 7. 入力値をリセット
+        // ユーザーが前回入力した値を維持したい可能性もあるため、今回は種目以外をリセットする
         weightInput.value = '60'; 
         repsSelect.value = '10';
         setsSelect.value = '3';
-        exerciseSelect.value = 'benchpress';
+        // exerciseSelect.value は現在の選択を維持
         
         alert('トレーニングログを記録しました！');
     });
+
+    // -----------------------------------------------------
+    // 4. ログ分析機能 (グラフと表)
+    // -----------------------------------------------------
+
+    // Estimated 1 Repetition Maximum (Epleyの公式)
+    function calculate1RM(weight, reps) {
+        if (reps === 0 || weight === 0) return 0;
+        if (reps === 1) return weight;
+        return Math.round(weight * (1 + (reps / 30)));
+    }
+
+    // ログ分析のメイン実行関数
+    function renderAnalytics() {
+        const logs = loadLogs().filter(log => log.weight > 0 && log.reps > 0);
+        if (logs.length === 0) {
+            logAnalyticsContainer.style.display = 'none';
+            return;
+        }
+        logAnalyticsContainer.style.display = 'block';
+
+        renderVolumeGraph(logs);
+        renderSummaryTable(logs);
+    }
+    
+    // 【グラフ描画】週間トレーニングボリューム
+    function renderVolumeGraph(logs) {
+        const volumeData = {}; // { date_key: total_volume }
+        const today = new Date();
+        
+        // 過去7日間の日付キーを初期化 (ボリューム0で)
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            const dateKey = date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+            volumeData[dateKey] = 0;
+        }
+
+        // ログを最新から順に処理し、過去7日間のボリュームを集計
+        logs.forEach(log => {
+            const logDate = new Date(log.id); // ID (タイムスタンプ) から日付を取得
+            const dateKey = logDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+            
+            // ログが過去7日間の範囲内であればボリュームを追加
+            if (dateKey in volumeData) {
+                // ボリューム = 重量 × 回数 × セット数
+                const volume = log.weight * log.reps * log.sets;
+                volumeData[dateKey] += volume;
+            }
+        });
+        
+        // データを日付順（古い順）にソート
+        const sortedDates = Object.keys(volumeData).sort((a, b) => {
+             // mm/dd 形式をソート可能にする（簡単なソート）
+             const [aM, aD] = a.split('/').map(Number);
+             const [bM, bD] = b.split('/').map(Number);
+             if (aM !== bM) return aM - bM;
+             return aD - bD;
+        });
+
+        // グラフ描画
+        const chartContainer = document.querySelector('#volume-graph .bar-chart-container');
+        chartContainer.innerHTML = '';
+        
+        const volumes = sortedDates.map(date => volumeData[date]);
+        const maxVolume = Math.max(...volumes);
+
+        sortedDates.forEach(date => {
+            const volume = volumeData[date];
+            const height = maxVolume > 0 ? (volume / maxVolume) * 100 : 0;
+            const bar = document.createElement('div');
+            bar.classList.add('chart-bar');
+            bar.style.height = `${height}%`;
+            
+            bar.innerHTML = `
+                <span class="chart-bar-value">${Math.round(volume / 1000)}k</span>
+                <span class="chart-bar-label">${date}</span>
+            `;
+            chartContainer.appendChild(bar);
+        });
+    }
+
+    // 【表描画】種目別推定1RM
+    function renderSummaryTable(logs) {
+        const max1RM = {}; // { exerciseValue: { max_1rm: value, date: date_str } }
+        
+        logs.forEach(log => {
+            // 自重、有酸素運動などは除外
+            if (log.weight === 0 || log.reps === 0 || log.exerciseValue === 'push_up' || log.exerciseValue === 'pull_up' || log.exerciseValue === 'cardio') return;
+
+            const rm = calculate1RM(log.weight, log.reps);
+            
+            if (!max1RM[log.exerciseValue] || rm > max1RM[log.exerciseValue].max_1rm) {
+                max1RM[log.exerciseValue] = {
+                    max_1rm: rm,
+                    date: log.date.split(' ')[0] // 日付のみ取得
+                };
+            }
+        });
+        
+        const tableBody = document.querySelector('#summary-table tbody');
+        tableBody.innerHTML = '';
+        
+        // ログ入力欄のoptionタグから種目名を取得
+        const options = Array.from(exerciseSelect.options).filter(opt => opt.value in max1RM);
+        
+        // 推定1RMの高い順にソート
+        options.sort((a, b) => max1RM[b.value].max_1rm - max1RM[a.value].max_1rm);
+
+        options.forEach(option => {
+            const data = max1RM[option.value];
+            const row = tableBody.insertRow();
+            
+            row.insertCell().textContent = option.textContent.split(' ')[0]; // 種目名のみ
+            row.insertCell().textContent = `${data.max_1rm} kg`;
+            row.insertCell().textContent = data.date;
+        });
+
+        // データがない場合はメッセージを表示
+        if (options.length === 0) {
+             const row = tableBody.insertRow();
+             const cell = row.insertCell();
+             cell.colSpan = 3;
+             cell.textContent = '記録された重さを伴うトレーニングログがありません。';
+             cell.style.textAlign = 'center';
+             cell.style.fontStyle = 'italic';
+        }
+    }
+    
+    // タブ切り替え機能の設定
+    function setupAnalyticsTabs() {
+        const tabs = document.querySelectorAll('.tab-button');
+        const contents = document.querySelectorAll('.analytics-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // タブの状態をリセット
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                
+                // クリックされたタブをアクティブにし、対応するコンテンツを表示
+                tab.classList.add('active');
+                const targetId = tab.dataset.target;
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+        
+        // 初期表示をボリュームグラフにする
+        document.querySelector('.tab-button[data-target="volume-graph"]').click();
+    }
 });
