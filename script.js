@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newLogEntry = document.createElement('div');
         newLogEntry.classList.add('log-entry');
         
+        // ログIDを要素のデータ属性に保存
         newLogEntry.dataset.logId = log.id; 
 
         const header = document.createElement('strong');
@@ -113,9 +114,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // ボタンの親要素であるlog-entryからlogIdを取得
         const logEntry = event.target.closest('.log-entry');
         // IDは文字列として取得されるので、数値に変換
+        // data-log-idが存在しない、またはNaNになる場合に備えてチェック
         const logIdToDelete = parseInt(logEntry.dataset.logId); 
         
-        if (!confirm('このログを削除してもよろしいですか？')) {
+        if (isNaN(logIdToDelete) || !confirm('このログを削除してもよろしいですか？')) {
             return;
         }
 
@@ -123,8 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const storedLogs = localStorage.getItem(LOG_STORAGE_KEY);
         let currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
         
-        // 2. 該当IDのログを配列から除外
-        // 削除できない場合、log.id !== logIdToDelete の比較がうまくいっていない可能性があるので、両方を数値に変換して比較
+        // 2. 該当IDのログを配列から除外 (IDの型を確実に合わせるため、比較時に両方parseIntする)
         const updatedLogs = currentLogs.filter(log => parseInt(log.id) !== logIdToDelete);
         
         // 3. 削除後の配列をlocalStorageに上書き保存 (永続化)
@@ -214,15 +215,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // -----------------------------------------------------
-    // 4. ログ分析機能 (グラフと表) (省略/維持)
+    // 4. ログ分析機能 (グラフと表) (視認性の向上)
     // -----------------------------------------------------
     
+    // Estimated 1 Repetition Maximum (Epleyの公式)
     function calculate1RM(weight, reps) {
         if (reps === 0 || weight === 0) return 0;
         if (reps === 1) return weight;
         return Math.round(weight * (1 + (reps / 30)));
     }
 
+    // ログ分析のメイン実行関数
     function renderAnalytics() {
         const logs = loadLogs().filter(log => log.weight > 0 && log.reps > 0);
         if (logs.length === 0) {
@@ -235,10 +238,12 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSummaryTable(logs);
     }
     
+    // 【グラフ描画】週間トレーニングボリューム
     function renderVolumeGraph(logs) {
-        const volumeData = {}; 
+        const volumeData = {}; // { date_key: total_volume }
         const today = new Date();
         
+        // 過去7日間の日付キーを初期化 (ボリューム0で)
         for (let i = 0; i < 7; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() - i);
@@ -246,48 +251,60 @@ document.addEventListener('DOMContentLoaded', function() {
             volumeData[dateKey] = 0;
         }
 
+        // ログを最新から順に処理し、過去7日間のボリュームを集計
         logs.forEach(log => {
             const logDate = new Date(log.id); 
             const dateKey = logDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
             
+            // ログが過去7日間の範囲内であればボリュームを追加
             if (dateKey in volumeData) {
+                // ボリューム = 重量 × 回数 × セット数
                 const volume = log.weight * log.reps * log.sets;
                 volumeData[dateKey] += volume;
             }
         });
         
+        // データを日付順（古い順）にソート
         const sortedDates = Object.keys(volumeData).sort((a, b) => {
+             // mm/dd 形式をソート可能にする
              const [aM, aD] = a.split('/').map(Number);
              const [bM, bD] = b.split('/').map(Number);
              if (aM !== bM) return aM - bM;
              return aD - bD;
         });
 
+        // グラフ描画
         const chartContainer = document.querySelector('#volume-graph .bar-chart-container');
         chartContainer.innerHTML = '';
         
         const volumes = sortedDates.map(date => volumeData[date]);
         const maxVolume = Math.max(...volumes);
 
+        // ボリュームを数千(k)単位で表示
         sortedDates.forEach(date => {
             const volume = volumeData[date];
             const height = maxVolume > 0 ? (volume / maxVolume) * 100 : 0;
             const bar = document.createElement('div');
             bar.classList.add('chart-bar');
-            bar.style.height = `${height}%`;
+            bar.style.height = `${Math.max(5, height)}%`; // 最低5%の高さでバーを表示（視認性向上のため）
             
+            // k単位で表示（小数点以下は切り捨て）
+            const volumeK = Math.round(volume / 1000); 
+
             bar.innerHTML = `
-                <span class="chart-bar-value">${Math.round(volume / 1000)}k</span>
+                <span class="chart-bar-value">${volumeK}k</span>
                 <span class="chart-bar-label">${date}</span>
             `;
             chartContainer.appendChild(bar);
         });
     }
 
+    // 【表描画】種目別推定1RM (省略/維持)
     function renderSummaryTable(logs) {
-        const max1RM = {}; 
+        const max1RM = {}; // { exerciseValue: { max_1rm: value, date: date_str } }
         
         logs.forEach(log => {
+            // 自重、有酸素運動などは除外
             if (log.weight === 0 || log.reps === 0 || log.exerciseValue === 'push_up' || log.exerciseValue === 'pull_up' || log.exerciseValue === 'cardio') return;
 
             const rm = calculate1RM(log.weight, log.reps);
@@ -295,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!max1RM[log.exerciseValue] || rm > max1RM[log.exerciseValue].max_1rm) {
                 max1RM[log.exerciseValue] = {
                     max_1rm: rm,
-                    date: log.date.split(' ')[0] 
+                    date: log.date.split(' ')[0] // 日付のみ取得
                 };
             }
         });
@@ -303,19 +320,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const tableBody = document.querySelector('#summary-table tbody');
         tableBody.innerHTML = '';
         
+        // ログ入力欄のoptionタグから種目名を取得
         const options = Array.from(exerciseSelect.options).filter(opt => opt.value in max1RM);
         
+        // 推定1RMの高い順にソート
         options.sort((a, b) => max1RM[b.value].max_1rm - max1RM[a.value].max_1rm);
 
         options.forEach(option => {
             const data = max1RM[option.value];
             const row = tableBody.insertRow();
             
-            row.insertCell().textContent = option.textContent.split(' ')[0]; 
+            row.insertCell().textContent = option.textContent.split(' ')[0]; // 種目名のみ
             row.insertCell().textContent = `${data.max_1rm} kg`;
             row.insertCell().textContent = data.date;
         });
 
+        // データがない場合はメッセージを表示
         if (options.length === 0) {
              const row = tableBody.insertRow();
              const cell = row.insertCell();
@@ -326,21 +346,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // タブ切り替え機能の設定
     function setupAnalyticsTabs() {
         const tabs = document.querySelectorAll('.tab-button');
         const contents = document.querySelectorAll('.analytics-content');
 
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
+                // タブの状態をリセット
                 tabs.forEach(t => t.classList.remove('active'));
                 contents.forEach(c => c.classList.remove('active'));
                 
+                // クリックされたタブをアクティブにし、対応するコンテンツを表示
                 tab.classList.add('active');
                 const targetId = tab.dataset.target;
                 document.getElementById(targetId).classList.add('active');
             });
         });
         
+        // 初期表示をボリュームグラフにする
         document.querySelector('.tab-button[data-target="volume-graph"]').click();
     }
 });
