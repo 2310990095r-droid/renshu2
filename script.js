@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const repsSelect = document.getElementById('reps');
     const setsSelect = document.getElementById('sets');
     const pastLogsContainer = document.getElementById('past-logs');
-    const logAnalyticsContainer = document.getElementById('log-analytics'); // ログ分析コンテナを取得
+
+    // ログ分析機能が削除されたため、関連するDOM要素の参照は不要になりました。
 
     const LOG_STORAGE_KEY = 'trainingLogs';
 
@@ -49,19 +50,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // -----------------------------------------------------
-    // 2. ログの永続化・表示・削除機能 (修正箇所)
+    // 2. ログの永続化・表示・削除機能
     // -----------------------------------------------------
     
     // ページロード時に実行
     function initializeLogSystem() {
+        // 分析グラフの処理を削除し、ログのロードのみを実行
         loadLogs();
-        renderAnalytics(); 
-        setupAnalyticsTabs(); 
     }
     initializeLogSystem();
 
     function saveLogs(logs) {
-        // logs配列をJSON文字列に変換し、localStorageに保存
         localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
     }
 
@@ -72,16 +71,14 @@ document.addEventListener('DOMContentLoaded', function() {
         let logs = [];
         
         if (storedLogs) {
-             // IDの無い古いログ形式に対応するため、一度パースしてIDがないものがあれば付与する
-            logs = JSON.parse(storedLogs).map(log => {
+             logs = JSON.parse(storedLogs).map(log => {
                 if (!log.id) {
-                    // IDがないログには、暫定でランダムなIDを付与する (次回保存時に確定)
                     log.id = Date.now() + Math.floor(Math.random() * 1000); 
                 }
                 return log;
             });
         } else {
-             // データがない場合は、初期のサンプルログを設定し、IDを付与
+             // データがない場合は、初期のサンプルログを設定
              const initialLogs = [
                 { date: '2025/10/06 (月)', part: '胸', detail: 'ベンチプレス: 80kg × 8回 × 3セット', exerciseValue: 'benchpress', weight: 80, reps: 8, sets: 3 },
                 { date: '2025/10/06 (月)', part: '胸', detail: 'ディップス: 自重 × 10回 × 3セット', exerciseValue: 'push_up', weight: 0, reps: 10, sets: 3 },
@@ -90,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
              logs = initialLogs.map((log, index) => ({
                  ...log,
-                 id: Date.now() + index // 初期ログにも一意のIDを付与
+                 id: Date.now() + index 
              }));
             
             saveLogs(logs);
@@ -100,16 +97,16 @@ document.addEventListener('DOMContentLoaded', function() {
         logs.forEach(log => {
             appendLogToHTML(log, false); 
         });
-        return logs;
+        
+        return logs; 
     }
     
     // ログエントリをHTMLに追加する共通関数
-    // logオブジェクト全体を受け取るように変更
     function appendLogToHTML(log, prepend = true) {
         const newLogEntry = document.createElement('div');
         newLogEntry.classList.add('log-entry');
         
-        // ログIDを要素のデータ属性に保存（★削除に必要な最重要項目）
+        // ログIDを要素のデータ属性に保存（削除機能のために必要）
         newLogEntry.dataset.logId = log.id; 
 
         const header = document.createElement('strong');
@@ -120,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
         detailP.textContent = log.detail;
         newLogEntry.appendChild(detailP);
 
-        // 削除ボタンの追加（★削除ボタンとイベントリスナーの追加）
+        // 削除ボタンの追加（削除機能のために必要）
         const deleteBtn = document.createElement('button');
         deleteBtn.classList.add('delete-log-btn');
         deleteBtn.textContent = '削除';
@@ -134,9 +131,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 削除処理の本体（★削除ロジックの追加）
+    // 削除処理の本体
     function handleDeleteLog(event) {
-        // ボタンの親要素であるlog-entryからlogIdを取得
         const logEntry = event.target.closest('.log-entry');
         const logIdToDelete = parseInt(logEntry.dataset.logId); 
         
@@ -144,27 +140,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // 1. localStorageからログを読み込む
         const storedLogs = localStorage.getItem(LOG_STORAGE_KEY);
         let currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
         
-        // 2. 該当IDのログを配列から除外
+        // 該当IDのログを配列から除外
         const updatedLogs = currentLogs.filter(log => parseInt(log.id) !== logIdToDelete);
         
-        // 3. 削除後の配列をlocalStorageに上書き保存 (永続化)
+        // 削除後の配列をlocalStorageに上書き保存 (永続化)
         saveLogs(updatedLogs); 
         
-        // 4. 画面上の要素を削除
+        // 画面上の要素を削除
         logEntry.remove();
         
-        // 5. 分析グラフを更新
-        renderAnalytics();
+        // 分析グラフの更新処理は削除済み
 
         alert('ログを削除しました。');
     }
     
     // -----------------------------------------------------
-    // 3. ログ記録時の処理 (修正: ログオブジェクトにIDと分析用データ追加)
+    // 3. ログ記録時の処理
     // -----------------------------------------------------
 
     addButton.addEventListener('click', function() {
@@ -181,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
              return;
         }
 
-        // ... (日付、部位判定ロジックは省略/維持) ...
+        // ... (日付、部位判定ロジックは維持) ...
         const now = new Date();
         const dateString = now.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
         const dayOfWeek = now.toLocaleDateString('ja-JP', { weekday: 'short' });
@@ -205,9 +199,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const weightDisplay = (weight > 0) ? `${weight}kg` : '自重';
         const detailString = `${exerciseName}: ${weightDisplay} × ${reps}回 × ${sets}セット`;
 
-        // 3. 新しいログオブジェクトを作成 (一意のIDと分析用データを含める)
+        // 3. 新しいログオブジェクトを作成 (IDとログ詳細データ)
         const newLog = {
-            id: Date.now(), // ★一意のID
+            id: Date.now(), 
             date: fullDate,
             exerciseValue: exerciseValue, 
             weight: weight,
@@ -226,10 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 5. HTMLに表示
         appendLogToHTML(newLog, true);
         
-        // 6. 分析グラフを更新
-        renderAnalytics();
-
-        // 7. 入力値をリセット
+        // 6. 入力値をリセット
         weightInput.value = '60'; 
         repsSelect.value = '10';
         setsSelect.value = '3';
@@ -239,154 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // -----------------------------------------------------
-    // 4. ログ分析機能 (グラフと表) (再導入)
+    // 4. ログ分析機能 (グラフと表) は全て削除されました。
     // -----------------------------------------------------
-    
-    function calculate1RM(weight, reps) {
-        if (reps === 0 || weight === 0) return 0;
-        if (reps === 1) return weight;
-        return Math.round(weight * (1 + (reps / 30)));
-    }
-
-    // ログ分析のメイン実行関数
-    function renderAnalytics() {
-        // weightとrepsが0より大きいログのみをフィルタ
-        const logs = loadLogs().filter(log => log.weight > 0 && log.reps > 0);
-        if (logs.length === 0) {
-            logAnalyticsContainer.style.display = 'none';
-            return;
-        }
-        logAnalyticsContainer.style.display = 'block';
-
-        renderVolumeGraph(logs);
-        renderSummaryTable(logs);
-    }
-    
-    // 【グラフ描画】週間トレーニングボリューム
-    function renderVolumeGraph(logs) {
-        const volumeData = {}; // { date_key: total_volume }
-        const today = new Date();
-        
-        // 過去7日間の日付キーを初期化 (ボリューム0で)
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            const dateKey = date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-            volumeData[dateKey] = 0;
-        }
-
-        // ログを集計
-        logs.forEach(log => {
-            // log.idがタイムスタンプとして機能するため、これを使用して日付を計算
-            const logDate = new Date(log.id); 
-            const dateKey = logDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-            
-            if (dateKey in volumeData) {
-                // ボリューム = 重量 × 回数 × セット数
-                const volume = log.weight * log.reps * log.sets;
-                volumeData[dateKey] += volume;
-            }
-        });
-        
-        // データを日付順（古い順）にソート
-        const sortedDates = Object.keys(volumeData).sort((a, b) => {
-             const [aM, aD] = a.split('/').map(Number);
-             const [bM, bD] = b.split('/').map(Number);
-             if (aM !== bM) return aM - bM;
-             return aD - bD;
-        });
-
-        // グラフ描画
-        const chartContainer = document.querySelector('#volume-graph .bar-chart-container');
-        chartContainer.innerHTML = '';
-        
-        const volumes = sortedDates.map(date => volumeData[date]);
-        const maxVolume = Math.max(...volumes);
-
-        // ボリュームを数千(k)単位で表示
-        sortedDates.forEach(date => {
-            const volume = volumeData[date];
-            const height = maxVolume > 0 ? (volume / maxVolume) * 100 : 0;
-            const bar = document.createElement('div');
-            bar.classList.add('chart-bar');
-            bar.style.height = `${Math.max(5, height)}%`; // 最低5%の高さでバーを表示（視認性向上のため）
-            
-            const volumeK = Math.round(volume / 1000); 
-
-            bar.innerHTML = `
-                <span class="chart-bar-value">${volumeK}k</span>
-                <span class="chart-bar-label">${date}</span>
-            `;
-            chartContainer.appendChild(bar);
-        });
-    }
-
-    // 【表描画】種目別推定1RM
-    function renderSummaryTable(logs) {
-        const max1RM = {}; 
-        
-        logs.forEach(log => {
-            // 自重、有酸素運動などは除外
-            if (log.weight === 0 || log.reps === 0 || log.exerciseValue === 'push_up' || log.exerciseValue === 'pull_up' || log.exerciseValue === 'cardio' || log.exerciseValue === 'stretch') return;
-
-            const rm = calculate1RM(log.weight, log.reps);
-            
-            if (!max1RM[log.exerciseValue] || rm > max1RM[log.exerciseValue].max_1rm) {
-                max1RM[log.exerciseValue] = {
-                    max_1rm: rm,
-                    // ログID（タイムスタンプ）から日付を取得し、曜日を除外
-                    date: new Date(log.id).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
-                };
-            }
-        });
-        
-        const tableBody = document.querySelector('#summary-table tbody');
-        tableBody.innerHTML = '';
-        
-        // ログ入力欄のoptionタグから種目名を取得
-        // この処理はログ入力欄のDOM構造に依存するため、HTML側のセレクタが変更されていないことを前提とする
-        const options = Array.from(exerciseSelect.options).filter(opt => opt.value in max1RM);
-        
-        // 推定1RMの高い順にソート
-        options.sort((a, b) => max1RM[b.value].max_1rm - max1RM[a.value].max_1rm);
-
-        options.forEach(option => {
-            const data = max1RM[option.value];
-            const row = tableBody.insertRow();
-            
-            row.insertCell().textContent = option.textContent.split(' ')[0]; // 種目名のみ
-            row.insertCell().textContent = `${data.max_1rm} kg`;
-            row.insertCell().textContent = data.date;
-        });
-
-        // データがない場合はメッセージを表示
-        if (options.length === 0) {
-             const row = tableBody.insertRow();
-             const cell = row.insertCell();
-             cell.colSpan = 3;
-             cell.textContent = '重さを伴うログがなく、推定1RMを計算できません。';
-             cell.style.textAlign = 'center';
-             cell.style.fontStyle = 'italic';
-        }
-    }
-    
-    // タブ切り替え機能の設定
-    function setupAnalyticsTabs() {
-        const tabs = document.querySelectorAll('.tab-button');
-        const contents = document.querySelectorAll('.analytics-content');
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                contents.forEach(c => c.classList.remove('active'));
-                
-                tab.classList.add('active');
-                const targetId = tab.dataset.target;
-                document.getElementById(targetId).classList.add('active');
-            });
-        });
-        
-        // 初期表示をボリュームグラフにする
-        document.querySelector('.tab-button[data-target="volume-graph"]').click();
-    }
 });
