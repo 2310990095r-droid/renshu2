@@ -7,16 +7,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const pastLogsContainer = document.getElementById('past-logs');
 
     // -----------------------------------------------------
-    // 1. 永続化機能の追加
+    // 1. 筋トレ飯のランダム表示機能
+    // -----------------------------------------------------
+    const recommendedMeals = [
+        { name: "鮭の味噌マヨホイル焼き＆玄米", points: ["良質な脂質: 鮭に含まれるDHA・EPA（オメガ3脂肪酸）が回復をサポート。", "複合炭水化物: 玄米でエネルギーを長時間供給し、インスリンを安定化。"] },
+        { name: "鶏むね肉とブロッコリーの和風炒め", points: ["高タンパク質: 鶏むね肉で筋肉の材料をたっぷり補給。", "ビタミンC: ブロッコリーで免疫力とコラーゲン生成をサポート。"] },
+        { name: "マグロとアボカドのポキ丼", points: ["良質なタンパク質: マグロでアミノ酸を効率よく摂取。", "ミネラル・ビタミンE: アボカドで抗酸化作用とホルモンバランスをサポート。"] },
+        { name: "牛赤身肉とキノコのオイスターソース炒め", points: ["鉄分・亜鉛: 牛肉で酸素運搬能力と代謝を向上。", "食物繊維: キノコで腸内環境を整え、栄養吸収を促進。"] },
+        { name: "鯖缶と納豆のパワーサラダ", points: ["オメガ3脂肪酸: 鯖缶で炎症を抑え、回復を促進。", "プロバイオティクス: 納豆で腸内環境を改善し、栄養の吸収率を高める。"] },
+        { name: "豚ヒレ肉のソテーとレンズ豆のポタージュ", points: ["ビタミンB1: 豚ヒレ肉で疲労回復と糖質の代謝をサポート。", "複合炭水化物: レンズ豆で持続的なエネルギーと食物繊維を摂取。"] }
+    ];
+
+    function displayRandomMeal() {
+        const mealContainer = document.querySelector('#recommended-meal .meal-detail');
+        const randomIndex = Math.floor(Math.random() * recommendedMeals.length);
+        const meal = recommendedMeals[randomIndex];
+        
+        let html = `
+            <p><strong>メニュー名:</strong> ${meal.name}</p>
+            <h3>栄養ポイント</h3>
+            <ul>
+                ${meal.points.map(point => `<li>${point}</li>`).join('')}
+            </ul>
+        `;
+        mealContainer.innerHTML = html;
+    }
+    
+    // ページロード時に筋トレ飯を表示
+    displayRandomMeal();
+
+
+    // -----------------------------------------------------
+    // 2. ログの永続化機能 (localStorageを使用)
     // -----------------------------------------------------
 
     const LOG_STORAGE_KEY = 'trainingLogs';
     
-    // HTMLに初期表示されているサンプルログは、JavaScriptで管理するために削除します。
-    // 代わりにlocalStorageからデータをロードします。
-    // ★HTMLの既存のログを全て削除してから、このスクリプトを適用してください。
-    // (もしHTMLの既存ログを残したい場合は、最初にlocalStorageに保存する処理を追加します)
-
     // ローカルストレージからの読み込みと表示
     loadLogs();
 
@@ -50,12 +76,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // ログをHTMLに表示
         logs.forEach(log => {
-            appendLogToHTML(log.date, log.part, log.detail);
+            appendLogToHTML(log.date, log.part, log.detail, false); // falseはリストの先頭に追加しないことを示す
         });
     }
     
     // ログエントリをHTMLに追加する共通関数
-    function appendLogToHTML(date, part, detail) {
+    function appendLogToHTML(date, part, detail, prepend = true) {
         const newLogEntry = document.createElement('div');
         newLogEntry.classList.add('log-entry');
         
@@ -67,12 +93,16 @@ document.addEventListener('DOMContentLoaded', function() {
         detailP.textContent = detail;
         newLogEntry.appendChild(detailP);
 
-        // 常にリストの先頭に挿入
-        pastLogsContainer.insertBefore(newLogEntry, pastLogsContainer.firstElementChild);
+        // 新規ログはリストの先頭に、ロード時のログはリストの末尾に追加
+        if (prepend && pastLogsContainer.firstElementChild) {
+            pastLogsContainer.insertBefore(newLogEntry, pastLogsContainer.firstElementChild);
+        } else {
+            pastLogsContainer.appendChild(newLogEntry);
+        }
     }
     
     // -----------------------------------------------------
-    // 2. ログ追加ボタンの処理 (localStorageへの保存を追加)
+    // 3. ログ追加ボタンの処理
     // -----------------------------------------------------
 
     addButton.addEventListener('click', function() {
@@ -118,8 +148,8 @@ document.addEventListener('DOMContentLoaded', function() {
             detail: detailString
         };
         
-        // 4. HTMLに表示
-        appendLogToHTML(newLog.date, newLog.part, newLog.detail);
+        // 4. HTMLに表示 (先頭に追加)
+        appendLogToHTML(newLog.date, newLog.part, newLog.detail, true);
         
         // 5. localStorageのデータを更新
         const currentLogsString = localStorage.getItem(LOG_STORAGE_KEY);
