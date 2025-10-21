@@ -39,101 +39,8 @@ h2 {
     margin-bottom: 15px;
 }
 
-/* --- ログ分析セクションのスタイル (分析グラフ) --- */
-#log-analytics {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #fcfcfc;
-}
-/* タブ切り替えのスタイル（省略/維持） */
-.analytics-tabs {
-    margin-bottom: 15px;
-    border-bottom: 2px solid #ecf0f1;
-}
-.tab-button {
-    background-color: #ecf0f1;
-    border: none;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 5px 5px 0 0;
-    margin-right: 5px;
-    transition: background-color 0.2s, color 0.2s;
-}
-.tab-button.active {
-    background-color: #e74c3c;
-    color: white;
-}
-.analytics-content {
-    display: none;
-    padding-top: 10px;
-}
-.analytics-content.active {
-    display: block;
-}
 
-/* ログ分析グラフスタイル - 視認性を重視し、明確なバーチャートを維持 */
-.bar-chart-container { /* ログ分析グラフのコンテナ */
-    height: 180px;
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    padding-top: 20px;
-    border-left: 2px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    position: relative;
-    padding-bottom: 25px; /* ラベルのスペースを確保 */
-}
-.chart-bar { /* ログ分析グラフのバー */
-    flex-grow: 1; /* バーの幅を均等にする */
-    background-color: #3498db;
-    transition: height 0.5s ease;
-    position: relative;
-    border-radius: 3px 3px 0 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    min-width: 10px; /* 最小幅を確保 */
-}
-.chart-bar-value {
-    position: absolute;
-    top: -18px;
-    font-size: 11px;
-    font-weight: bold;
-    color: #333;
-}
-.chart-bar-label {
-    position: absolute;
-    bottom: -20px;
-    font-size: 10px;
-    white-space: nowrap;
-}
-
-/* テーブルスタイル (省略/維持) */
-.summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 0.9em;
-}
-.summary-table th, .summary-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-.summary-table thead th {
-    background-color: #f5f5f5;
-    color: #333;
-}
-.summary-table tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-
-/* --- 混雑状況グラフのスタイル (修正済み) --- */
+/* --- 混雑状況グラフのスタイル (維持) --- */
 .graph-section {
     grid-column: 1 / -1;
     display: grid;
@@ -192,7 +99,7 @@ h2 {
      color: #e74c3c;
 }
 
-/* --- ログエントリーと削除ボタンのスタイル (省略/維持) --- */
+/* --- ログエントリーと削除ボタンのスタイル (維持) --- */
 .log-entry {
     border-bottom: 1px dashed #ccc;
     padding: 10px 0;
@@ -217,7 +124,7 @@ h2 {
     background-color: #c0392b;
 }
 
-/* 📱 レスポンシブ対応 (Media Query) は省略/維持 */
+/* 📱 レスポンシブ対応 (Media Query) は維持 */
 @media (max-width: 768px) {
     /* ... (レスポンシブスタイルは省略/維持) ... */
     .container {
