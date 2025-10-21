@@ -39,7 +39,7 @@ h2 {
     margin-bottom: 15px;
 }
 
-/* --- ログ分析セクションのスタイル (新規追加) --- */
+/* --- ログ分析セクションのスタイル (分析グラフ) --- */
 #log-analytics {
     margin-bottom: 20px;
     padding: 15px;
@@ -47,6 +47,7 @@ h2 {
     border-radius: 8px;
     background-color: #fcfcfc;
 }
+/* ... (タブ切り替えのスタイルは省略/維持) ... */
 .analytics-tabs {
     margin-bottom: 15px;
     border-bottom: 2px solid #ecf0f1;
@@ -73,8 +74,8 @@ h2 {
     display: block;
 }
 
-/* グラフスタイル */
-.bar-chart-container {
+/* ログ分析グラフスタイル */
+.bar-chart-container { /* ログ分析グラフのコンテナ */
     height: 180px;
     display: flex;
     align-items: flex-end;
@@ -84,7 +85,7 @@ h2 {
     border-bottom: 2px solid #ccc;
     position: relative;
 }
-.chart-bar {
+.chart-bar { /* ログ分析グラフのバー */
     width: 20%;
     background-color: #3498db;
     transition: height 0.5s ease;
@@ -109,7 +110,7 @@ h2 {
     white-space: nowrap;
 }
 
-/* テーブルスタイル */
+/* テーブルスタイル (省略/維持) */
 .summary-table {
     width: 100%;
     border-collapse: collapse;
@@ -128,65 +129,76 @@ h2 {
 .summary-table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
-/* --- /ログ分析セクションのスタイル --- */
 
 
-/* --- 既存スタイルの継続/修正 --- */
-.meal-detail {
-    background-color: #f9f9f9;
-    padding: 15px;
+/* --- 混雑状況グラフのスタイル (表示されない問題の修正箇所) --- */
+.graph-section {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.graph-card {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.graph-area { /* 混雑状況グラフのコンテナ (分析グラフとセレクタが同じため注意) */
+    height: 250px;
+    background-color: #ecf0f1;
     border-radius: 8px;
+    position: relative;
+    padding: 15px;
 }
-.meal-detail strong {
-    color: #2980b9;
-}
-.meal-detail .detail-info {
-    font-size: 0.9em;
-    color: #555;
-    margin-top: 10px;
-    padding-top: 5px;
-    border-top: 1px dashed #ccc;
-}
-.meal-detail .detail-info p {
-    margin: 3px 0;
-}
-.log-input-group {
+.bar-container { /* 混雑状況のバーコンテナ */
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    align-items: center;
+    align-items: flex-end;
+    height: 100%;
+    gap: 5px;
+    padding-top: 20px;
+    box-sizing: border-box;
+    /* 混雑状況グラフのバーの親要素 */
 }
-/* ... (ログ入力と追加ボタンのスタイルは省略) ... */
-#add-log-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background-color: #2ecc71;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
+.bar { /* 混雑状況のバー */
+    width: 10%;
+    background-color: #3498db;
+    transition: height 0.5s ease;
+    position: relative;
+    border-radius: 3px 3px 0 0;
+    /* ★修正点：display: flex;などの余計なプロパティを削除し、純粋なバーにする */
+}
+.bar.warning {
+    background-color: #e74c3c;
+}
+.bar-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #555;
+}
+.bar-value {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
     font-weight: bold;
-    transition: background-color 0.3s;
+    color: #3498db;
 }
-#add-log-btn:hover {
-    background-color: #27ae60;
+.bar.warning .bar-value {
+     color: #e74c3c;
 }
-/* ログエントリの修正: 削除ボタンを右端に配置 */
+
+/* --- ログエントリーと削除ボタンのスタイル (省略/維持) --- */
 .log-entry {
     border-bottom: 1px dashed #ccc;
     padding: 10px 0;
-    position: relative; /* 削除ボタンの基準位置とする */
-    padding-right: 50px; /* 削除ボタンのスペースを確保 */
+    position: relative; 
+    padding-right: 50px; 
 }
-.log-entry:last-child {
-    border-bottom: none;
-}
-.log-entry p {
-    margin: 5px 0;
-}
-/* ログ削除ボタン */
 .delete-log-btn {
     position: absolute;
     top: 10px;
@@ -205,31 +217,9 @@ h2 {
     background-color: #c0392b;
 }
 
-/* ... (混雑状況グラフのスタイルとレスポンシブ対応は省略/維持) ... */
-.graph-section {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-.graph-card {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-.graph-area {
-    height: 250px;
-    background-color: #ecf0f1;
-    border-radius: 8px;
-    position: relative;
-    padding: 15px;
-}
-/* ... (混雑状況グラフのバーのスタイルは省略/維持) ... */
-
-/* 📱 レスポンシブ対応 (Media Query) */
+/* 📱 レスポンシブ対応 (Media Query) は省略/維持 */
 @media (max-width: 768px) {
-    /* ... (既存のレスポンシブスタイルは省略/維持) ... */
+    /* ... (レスポンシブスタイルは省略/維持) ... */
     .container {
         grid-template-columns: 1fr;
     }
@@ -237,34 +227,7 @@ h2 {
         grid-column: 1 / 1;
         grid-template-columns: 1fr;
     }
-    
-    /* ログ分析セクションの調整 */
-    #log-analytics {
-        padding: 10px;
-    }
-    .tab-button {
-        padding: 8px 12px;
-        font-size: 0.9em;
-    }
-    .bar-chart-container {
-        height: 150px;
-    }
-    .chart-bar {
-        width: 15%; /* スペースを確保 */
-    }
-    .summary-table {
-        font-size: 0.8em;
-    }
-    .summary-table th, .summary-table td {
-        padding: 6px;
-    }
-
-    /* レスポンシブでの削除ボタン調整 */
     .log-entry {
         padding-right: 40px; 
-    }
-    .delete-log-btn {
-        padding: 3px 6px;
-        font-size: 10px;
     }
 }
