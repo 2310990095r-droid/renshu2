@@ -46,6 +46,19 @@ h2 {
 .meal-detail strong {
     color: #2980b9;
 }
+/* 新規追加: 筋トレ飯の詳細情報 */
+.meal-detail .detail-info {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 10px;
+    padding-top: 5px;
+    border-top: 1px dashed #ccc;
+}
+.meal-detail .detail-info p {
+    margin: 3px 0;
+}
+
+
 .log-input-group {
     display: flex;
     gap: 10px;
@@ -78,9 +91,13 @@ h2 {
 #add-log-btn:hover {
     background-color: #27ae60;
 }
+
+/* ログエントリの修正: 削除ボタンを右端に配置 */
 .log-entry {
     border-bottom: 1px dashed #ccc;
     padding: 10px 0;
+    position: relative; /* 削除ボタンの基準位置とする */
+    padding-right: 50px; /* 削除ボタンのスペースを確保 */
 }
 .log-entry:last-child {
     border-bottom: none;
@@ -88,6 +105,27 @@ h2 {
 .log-entry p {
     margin: 5px 0;
 }
+
+/* 新規追加: ログ削除ボタン */
+.delete-log-btn {
+    position: absolute;
+    top: 10px;
+    right: 0;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    transition: background-color 0.3s;
+}
+.delete-log-btn:hover {
+    background-color: #c0392b;
+}
+
+
 .graph-section {
     grid-column: 1 / -1;
     display: grid;
@@ -146,7 +184,7 @@ h2 {
      color: #e74c3c;
 }
 
-/* 📱 レスポンシブ対応 (Media Query) - 改善版 */
+/* 📱 レスポンシブ対応 (Media Query) */
 @media (max-width: 768px) {
     body {
         padding: 10px;
@@ -203,5 +241,14 @@ h2 {
     }
     .graph-card p {
         margin-top: 20px !important;
+    }
+
+    /* レスポンシブでの削除ボタン調整 */
+    .log-entry {
+        padding-right: 40px; 
+    }
+    .delete-log-btn {
+        padding: 3px 6px;
+        font-size: 10px;
     }
 }
