@@ -6,8 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const setsSelect = document.getElementById('sets');
     const pastLogsContainer = document.getElementById('past-logs');
 
-    // ログ分析機能が削除されたため、関連するDOM要素の参照は不要になりました。
-
     const LOG_STORAGE_KEY = 'trainingLogs';
 
     // -----------------------------------------------------
@@ -55,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ページロード時に実行
     function initializeLogSystem() {
-        // 分析グラフの処理を削除し、ログのロードのみを実行
+        // ログのロードのみを実行
         loadLogs();
     }
     initializeLogSystem();
@@ -70,28 +68,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const storedLogs = localStorage.getItem(LOG_STORAGE_KEY);
         let logs = [];
         
+        // ★修正点: storedLogsがnull（データなし）の場合、logsは空のままになり、
+        // サンプルログの再生成を防ぎます。
         if (storedLogs) {
              logs = JSON.parse(storedLogs).map(log => {
                 if (!log.id) {
+                    // 古いログ形式対応
                     log.id = Date.now() + Math.floor(Math.random() * 1000); 
                 }
                 return log;
             });
-        } else {
-             // データがない場合は、初期のサンプルログを設定
-             const initialLogs = [
-                { date: '2025/10/06 (月)', part: '胸', detail: 'ベンチプレス: 80kg × 8回 × 3セット', exerciseValue: 'benchpress', weight: 80, reps: 8, sets: 3 },
-                { date: '2025/10/06 (月)', part: '胸', detail: 'ディップス: 自重 × 10回 × 3セット', exerciseValue: 'push_up', weight: 0, reps: 10, sets: 3 },
-                { date: '2025/10/04 (土)', part: '背中', detail: 'デッドリフト: 100kg × 5回 × 3セット', exerciseValue: 'deadlift', weight: 100, reps: 5, sets: 3 },
-                { date: '2025/10/04 (土)', part: '背中', detail: 'ラットプルダウン: 40kg × 12回 × 3セット', exerciseValue: 'latpulldown', weight: 40, reps: 12, sets: 3 }
-            ];
-             logs = initialLogs.map((log, index) => ({
-                 ...log,
-                 id: Date.now() + index 
-             }));
-            
-            saveLogs(logs);
-        }
+        } 
         
         // ログをHTMLに表示
         logs.forEach(log => {
@@ -152,8 +139,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // 画面上の要素を削除
         logEntry.remove();
         
-        // 分析グラフの更新処理は削除済み
-
         alert('ログを削除しました。');
     }
     
@@ -228,8 +213,4 @@ document.addEventListener('DOMContentLoaded', function() {
         
         alert('トレーニングログを記録しました！');
     });
-
-    // -----------------------------------------------------
-    // 4. ログ分析機能 (グラフと表) は全て削除されました。
-    // -----------------------------------------------------
 });
