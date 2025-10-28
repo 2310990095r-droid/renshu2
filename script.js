@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // =====================================================
+    // 筋トレサポートダッシュボード (index.html向け) の機能
+    // =====================================================
     const addButton = document.getElementById('add-log-btn');
     const exerciseSelect = document.getElementById('exercise');
     const weightInput = document.getElementById('weight');
@@ -9,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const LOG_STORAGE_KEY = 'trainingLogs';
 
     // -----------------------------------------------------
-    // 1. 筋トレ飯のランダム表示機能 (維持)
+    // 1. 筋トレ飯のランダム表示機能
     // -----------------------------------------------------
     const recommendedMeals = [
         // 既存の豊富なメニューデータ（省略）
@@ -213,4 +216,191 @@ document.addEventListener('DOMContentLoaded', function() {
         
         alert('トレーニングログを記録しました！');
     });
+
+    // =====================================================
+    // 混雑ヒストグラム (gm-hist.js向け) の機能
+    // =====================================================
+
+    // ==== ユーティリティ ====
+    const $ = (el, sel) => el.querySelector(sel);
+
+    function kanjiDow(n){ return ["月","火","水","木","金","土","日"][n-1] || ""; }
+
+    function median(arr){
+        const a = arr.slice().sort((x,y)=>x-y);
+        const n = a.length; if (!n) return null;
+        return (n & 1) ? a[(n-1)>>1] : (a[n/2-1] + a[n/2]) / 2;
+    }
+
+    function safeDate(s){
+        if (!s) return null;
+        let d = new Date(s);
+        if (isNaN(d)) d = new Date(s.replace(" ", "T"));
+        return isNaN(d) ? null : d;
+    }
+
+    // 引用符対応の軽量CSVパーサ
+    async function fetchCsvRows(url){
+        const res = await fetch(url + (url.includes("?") ? "&" : "?") + "cachebust=" + Date.now(), { cache: "no-store" });
+        const text = await res.text();
+        return text.trim().split(/\r?\n/).map(line=>{
+            const out=[]; let cur="",q=false;
+            for(let i=0;i<line.length;i++){
+                const ch=line[i], nx=line[i+1];
+                if(ch=='"'){ if(q && nx=='"'){cur+='"'; i++;} else {q=!q;} }
+                else if(ch==',' && !q){ out.push(cur); cur=""; }
+                else { cur+=ch; }
+            }
+            out.push(cur);
+            return out;
+        });
+    }
+
+    // ヘッダー列番号の特定（日本語/英語どちらでも可）
+    function indexByHeader(header){
+        const H = header.map(s => s.replace(/\s+/g,"").toLowerCase());
+        const find = (...kw) => H.findIndex(h => kw.some(k => h.includes(k)));
+        return {
+            ts:    find("記録時刻","timestamp","時刻"),
+            inC:   find("入室累計","in"),
+            outC:  find("退室累計","out"),
+            cur:   find("現在人数","current"),
+            dow:   find("曜日","dow"),
+            bin15: find("時刻15分","timebin","15")
+        };
+    }
+
+    function buildBins(startHour, endHour){
+        const bins = (endHour - startHour + 1) * 4; // 15分刻み
+        return { bins, toIndex(d){
+            const h=d.getHours(), m=d.getMinutes();
+            if(h < startHour || h > endHour) return -1;
+            const i=(h - startHour) * 4 + Math.floor(m / 15);
+            return (i>=0 && i<bins) ? i : -1;
+        }};
+    }
+
+    // ==== 集計：log → 3系列の15分ヒストグラム ====
+    async function buildHists(csvUrl, dow, lookbackDays, minSamples, startHour, endHour){
+        const rows = await fetchCsvRows(csvUrl);
+        if (rows.length <= 1) return { current:[], inBins:[], outBins:[], bins: buildBins(startHour, endHour).bins }; // binsを返すように修正
+
+        const header = rows[0], idx = indexByHeader(header);
+        const records = rows.slice(1).map(r => {
+            const ts = safeDate(r[idx.ts]) || safeDate(r[idx.bin15]);
+            return {
+                ts,
+                dow: Number(r[idx.dow]),
+                cur: Number(r[idx.cur]),
+                inC: Number(r[idx.inC]),
+                outC: Number(r[idx.outC]),
+                b15: safeDate(r[idx.bin15]) || ts
+            };
+        }).filter(x => x.ts && !Number.isNaN(x.dow));
+
+        const from = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
+        const filtered = records.filter(x => x.ts.getTime() >= from && x.dow === dow).sort((a,b) => a.ts - b.ts);
+
+        const { bins, toIndex } = buildBins(startHour, endHour);
+        const curBins = Array.from({length:bins}, ()=>[]);
+        const inDeltaBins  = Array.from({length:bins}, ()=>[]);
+        const outDeltaBins = Array.from({length:bins}, ()=>[]);
+
+        for(let i=0;i<filtered.length;i++){
+            const row = filtered[i];
+            const idxBin = toIndex(row.b15);
+            if (idxBin < 0) continue;
+
+            // 現在人数（その時点の値）
+            if (!Number.isNaN(row.cur) && row.cur > 0) curBins[idxBin].push(row.cur);
+
+            // 入退室は累計の差分
+            if (i>0){
+                const prev = filtered[i-1];
+                const dIn  = Math.max(0, (isFinite(row.inC)?row.inC:0) - (isFinite(prev.inC)?prev.inC:0));
+                const dOut = Math.max(0, (isFinite(row.outC)?row.outC:0) - (isFinite(prev.outC)?prev.outC:0));
+                if (dIn>0)  inDeltaBins[idxBin].push(dIn);
+                if (dOut>0) outDeltaBins[idxBin].push(dOut);
+            }
+        }
+
+        const toPct = (arrBins)=>{
+            const meds = arrBins.map(a => (a.length >= minSamples) ? median(a) : null);
+            const maxv = Math.max(0, ...meds.filter(v => v != null));
+            return meds.map(v => (v==null || maxv===0) ? null : Math.round(v / maxv * 100));
+        };
+
+        return { current: toPct(curBins), inBins: toPct(inDeltaBins), outBins: toPct(outDeltaBins), bins };
+    }
+
+    // ==== 描画（Googleマップ風：コンパクト棒＋最小限の軸） ====
+    function renderBars(mountEl, pctArray, startHour, endHour, bins){
+        mountEl.innerHTML = "";
+
+        const bars = document.createElement("div");
+        bars.className = "gm-bars";
+        pctArray.forEach((v, i) => {
+            const bar = document.createElement("div");
+            bar.className = "gm-bar" + (v==null ? " is-empty" : "");
+            bar.style.setProperty("--bar-w", (100/bins) + "%");
+            const h = startHour + Math.floor(i/4);
+            const m = (i%4)*15;
+            bar.title = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")} → ${v==null ? "(サンプル不足)" : v}`;
+            bar.style.height = (v==null ? 0 : v) + "%";
+            bars.appendChild(bar);
+        });
+
+        const axis = document.createElement("div");
+        axis.className = "gm-axis";
+        const mid = Math.floor((startHour + endHour)/2);
+        [startHour, mid, endHour].forEach(t=>{
+            const s = document.createElement("span");
+            s.textContent = String(t).padStart(2,"0") + ":00";
+            axis.appendChild(s);
+        });
+
+        mountEl.appendChild(bars);
+        mountEl.appendChild(axis);
+    }
+
+    // ==== 初期化（HTMLの .gm-wrap 単位で動作） ====
+    async function initGmHistogram(wrap){
+        // nullチェックを追加
+        if (!wrap) return; 
+
+        const csvUrl  = wrap.dataset.csvUrl;
+        const startHour = Number(wrap.dataset.startHour || 9);
+        const endHour   = Number(wrap.dataset.endHour    || 20);
+
+        // クエリセレクタを.gm-wrap内から探すように統一
+        const dowSel   = wrap.querySelector('.gm-dow');
+        const lookback = wrap.querySelector('.gm-lookback');
+        const minInp   = wrap.querySelector('.gm-min');
+
+        // 要素がない場合は処理を中断
+        if (!dowSel || !lookback || !minInp) return; 
+
+        async function run(){
+            const dow = Number(dowSel.value);
+            const lookbackDays = Number(lookback.value);
+            const minSamples = Number(minInp.value);
+            const { current, inBins, outBins, bins } =
+                await buildHists(csvUrl, dow, lookbackDays, minSamples, startHour, endHour);
+
+            renderBars(wrap.querySelector('#hist-current'), current, startHour, endHour, bins);
+            renderBars(wrap.querySelector('#hist-in'),      inBins,  startHour, endHour, bins);
+            renderBars(wrap.querySelector('#hist-out'),     outBins, startHour, endHour, bins);
+        }
+
+        ['change','input'].forEach(ev=>{
+            dowSel.addEventListener(ev, run);
+            lookback.addEventListener(ev, run);
+            minInp.addEventListener(ev, run);
+        });
+
+        await run();
+    }
+
+    // ==== ページ内の全コンポーネントを起動 ====
+    document.querySelectorAll('.gm-wrap').forEach(initGmHistogram);
 });
