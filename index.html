@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>筋トレサポートダッシュボード</title>
     <link rel="stylesheet" href="style.css"> 
+    <link href="/css/gm-hist.css" rel="stylesheet" />
 </head>
 <body>
     <div class="container">
@@ -144,7 +145,39 @@
             </div>
         </div>
 
-    </div>
+        <hr style="margin-top: 40px; border: 1px solid #ccc;">
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>📈 曜日別・時間帯別 混雑ヒストグラム</h2>
+            <section class="gm-wrap"
+                    data-csv-url="https://docs.google.com/spreadsheets/d/【SHEET_ID】/export?format=csv&gid=【logのGID】"
+                    data-start-hour="9"
+                    data-end-hour="20"
+                    aria-label="曜日別15分ヒストグラム">
+                <div class="gm-controls">
+                    <label>曜日:
+                        <select class="gm-dow">
+                            <option value="1">月</option><option value="2">火</option><option value="3">水</option>
+                            <option value="4">木</option><option value="5">金</option><option value="6">土</option>
+                            <option value="7">日</option>
+                        </select>
+                    </label>
+                    <label>過去日数:<input class="gm-lookback" type="number" min="1" value="56"></label>
+                    <label>最小件数:<input class="gm-min" type="number" min="1" value="3"></label>
+                </div>
+
+                <h3 class="gm-title">現在人数（15分）</h3>
+                <div id="hist-current" class="gm-chart" role="img" aria-label="現在人数ヒストグラム"></div>
+
+                <h3 class="gm-title">入室（15分）</h3>
+                <div id="hist-in" class="gm-chart" role="img" aria-label="入室ヒストグラム"></div>
+
+                <h3 class="gm-title">退室（15分）</h3>
+                <div id="hist-out" class="gm-chart" role="img" aria-label="退室ヒストグラム"></div>
+            </section>
+        </div>
+        </div>
     <script src="script.js"></script>
+    <script src="/js/gm-hist.js" defer></script>
 </body>
 </html>
