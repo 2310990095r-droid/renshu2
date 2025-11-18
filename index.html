@@ -3,107 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>筋トレサポートダッシュボード</title>
+    <title>ジム混雑状況ダッシュボード</title>
     <link rel="stylesheet" href="style.css"> 
-    <link href="/css/gm-hist.css" rel="stylesheet" />
-</head>
+    </head>
 <body>
     <div class="container">
-        <h1>🏋️ 筋トレサポートダッシュボード 🚀</h1>
+        <h1>🏋️ ジム混雑状況ダッシュボード 🚀</h1>
         
-        <div class="card" id="recommended-meal">
-            <h2>🍴 本日のおすすめ筋トレ飯</h2>
-            <div class="meal-detail">
-                </div>
-        </div>
-
-        <div class="card" id="training-log">
-            <h2>📝 筋トレログ</h2>
-            
-            <h3>本日のトレーニングを記録</h3>
-            <div class="log-input-group">
-                <label for="exercise">種目:</label>
-                <select id="exercise">
-                    <optgroup label="胸 (Chest)">
-                        <option value="benchpress">ベンチプレス</option>
-                        <option value="incline_press">インクラインベンチプレス</option>
-                        <option value="dumbbell_press">ダンベルプレス</option>
-                        <option value="pec_fly">ペックフライ</option>
-                        <option value="push_up">プッシュアップ (自重)</option>
-                    </optgroup>
-                    <optgroup label="背中 (Back)">
-                        <option value="deadlift">デッドリフト</option>
-                        <option value="latpulldown">ラットプルダウン</option>
-                        <option value="bentover_row">ベントオーバーロウ</option>
-                        <option value="seated_row">シーテッドロウ</option>
-                        <option value="pull_up">懸垂 (プルアップ/自重)</option>
-                    </optgroup>
-                    <optgroup label="脚 (Legs)">
-                        <option value="squat">スクワット</option>
-                        <option value="leg_press">レッグプレス</option>
-                        <option value="romanian_deadlift">ルーマニアンデッドリフト (RDL)</option>
-                        <option value="leg_extension">レッグエクステンション</option>
-                        <option value="leg_curl">レッグカール</option>
-                        <option value="calf_raise">カーフレイズ</option>
-                    </optgroup>
-                    <optgroup label="肩 (Shoulders)">
-                        <option value="shoulderpress">ショルダープレス (ミリタリープレス)</option>
-                        <option value="side_raise">サイドレイズ</option>
-                        <option value="front_raise">フロントレイズ</option>
-                        <option value="reverse_fly">リアレイズ (リバースフライ)</option>
-                    </optgroup>
-                    <optgroup label="腕 (Arms)">
-                        <option value="armcurl">バーベル/ダンベルカール (二頭筋)</option>
-                        <option value="triceps_extension">トライセップスエクステンション (三頭筋)</option>
-                        <option value="hammer_curl">ハンマーカール</option>
-                        <option value="cable_pushdown">ケーブルプッシュダウン</option>
-                    </optgroup>
-                    <optgroup label="体幹 (Core)">
-                        <option value="crunch">クランチ (腹筋)</option>
-                        <option value="leg_raise">レッグレイズ</option>
-                        <option value="plank">プランク (静的)</option>
-                        <option value="russian_twist">ロシアンツイスト</option>
-                    </optgroup>
-                    <optgroup label="その他">
-                        <option value="cardio">有酸素運動 (ランニング/バイク)</option>
-                        <option value="stretch">ストレッチ/柔軟</option>
-                    </optgroup>
-                </select>
-            </div>
-            
-            <div class="log-input-group">
-                <label for="weight">重量 (kg):</label>
-                <input type="number" id="weight" min="1" value="60"> 
-            </div>
-
-            <div class="log-input-group">
-                <label for="reps">回数 (Reps):</label>
-                <select id="reps">
-                    <option value="6">6回</option>
-                    <option value="8">8回</option>
-                    <option value="10" selected>10回</option>
-                    <option value="12">12回</option>
-                    <option value="15">15回</option>
-                </select>
-            </div>
-
-            <div class="log-input-group">
-                <label for="sets">セット数 (Sets):</label>
-                <select id="sets">
-                    <option value="2">2セット</option>
-                    <option value="3" selected>3セット</option>
-                    <option value="4">4セット</option>
-                    <option value="5">5セット</option>
-                </select>
-            </div>
-            
-            <button id="add-log-btn">ログを追加</button>
-
-            <h3 style="margin-top: 20px;">過去のログ (履歴)</h3>
-            <div id="past-logs"> 
-                </div>
-        </div>
-
         <div class="graph-section">
             
             <div class="graph-card">
@@ -144,40 +50,7 @@
                 <p style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">※ 今週は前週よりも全体的に若干混雑しています。</p>
             </div>
         </div>
-
-        <hr style="margin-top: 40px; border: 1px solid #ccc;">
         
-        <div class="card" style="margin-top: 20px;">
-            <h2>📈 曜日別・時間帯別 混雑ヒストグラム</h2>
-            <section class="gm-wrap"
-                    data-csv-url="https://docs.google.com/spreadsheets/d/【SHEET_ID】/export?format=csv&gid=【logのGID】"
-                    data-start-hour="9"
-                    data-end-hour="20"
-                    aria-label="曜日別15分ヒストグラム">
-                <div class="gm-controls">
-                    <label>曜日:
-                        <select class="gm-dow">
-                            <option value="1">月</option><option value="2">火</option><option value="3">水</option>
-                            <option value="4">木</option><option value="5">金</option><option value="6">土</option>
-                            <option value="7">日</option>
-                        </select>
-                    </label>
-                    <label>過去日数:<input class="gm-lookback" type="number" min="1" value="56"></label>
-                    <label>最小件数:<input class="gm-min" type="number" min="1" value="3"></label>
-                </div>
-
-                <h3 class="gm-title">現在人数（15分）</h3>
-                <div id="hist-current" class="gm-chart" role="img" aria-label="現在人数ヒストグラム"></div>
-
-                <h3 class="gm-title">入室（15分）</h3>
-                <div id="hist-in" class="gm-chart" role="img" aria-label="入室ヒストグラム"></div>
-
-                <h3 class="gm-title">退室（15分）</h3>
-                <div id="hist-out" class="gm-chart" role="img" aria-label="退室ヒストグラム"></div>
-            </section>
         </div>
-        </div>
-    <script src="script.js"></script>
-    <script src="/js/gm-hist.js" defer></script>
-</body>
+    </body>
 </html>
