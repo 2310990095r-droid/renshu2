@@ -12,17 +12,6 @@ body {
     max-width: 1200px;
     margin: 0 auto;
 }
-/* .card スタイルは、ここでは graph-card と重複するため未使用とする */
-/* .card {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
-.card:hover {
-    transform: translateY(-5px);
-} */
 h1 {
     text-align: center;
     color: #2c3e50;
@@ -39,74 +28,36 @@ h2 {
 }
 
 
-/* --- 混雑状況グラフのスタイル (維持・一部変更) --- */
+/* --- グラフセクションのスタイル --- */
 .graph-section {
     display: grid;
     grid-template-columns: 1fr 1fr; /* 2列レイアウトを維持 */
     gap: 20px;
-    margin-top: 20px; /* 混雑グラフが先頭に来るためマージンを追加 */
+    margin-top: 20px; 
 }
 .graph-card {
     background-color: #ffffff;
     padding: 25px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease; /* ホバーエフェクトを追加 */
+    transition: transform 0.3s ease;
 }
 .graph-card:hover {
     transform: translateY(-5px);
 }
 .graph-area { /* 混雑状況グラフのコンテナ */
-    height: 250px;
+    /* Chart.js用に高さを指定 (index.html側にもインラインで設定) */
+    height: 300px; 
     background-color: #ecf0f1;
     border-radius: 8px;
     position: relative;
     padding: 15px;
 }
-.bar-container { /* 混雑状況のバーコンテナ */
-    display: flex;
-    align-items: flex-end;
-    height: 100%;
-    gap: 5px;
-    padding-top: 20px;
-    box-sizing: border-box;
-}
-.bar { /* 混雑状況のバー */
-    width: 10%; 
-    background-color: #3498db;
-    transition: height 0.5s ease;
-    position: relative;
-    border-radius: 3px 3px 0 0;
-}
-.bar.warning {
-    background-color: #e74c3c;
-}
-.bar-label {
-    position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 10px;
-    color: #555;
-}
-.bar-value {
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 12px;
-    font-weight: bold;
-    color: #3498db;
-}
-.bar.warning .bar-value {
-     color: #e74c3c;
-}
 
-/* --- ログ関連スタイルを削除 --- */
-/* .log-entry, .delete-log-btn のスタイルは削除 */
+/* --- 混雑状況グラフ (静的バー) のスタイルを全て削除/コメントアウト --- */
+/* .bar-container { display: none; } */
+/* .bar, .bar-label, .bar-value のスタイルは不要 */
 
-/* --- 混雑ヒストグラム (gm-hist.css) のスタイルを削除 --- */
-/* .gm-wrap, .gm-controls, .gm-title, .gm-chart などのスタイルは削除 */
 
 /* 📱 レスポンシブ対応 (Media Query) */
 @media (max-width: 768px) {
