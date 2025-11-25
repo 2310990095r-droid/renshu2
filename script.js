@@ -1,37 +1,40 @@
 // script.js
 
-// 筋トレサポートダッシュボード (index.html向け) の機能は全て削除されました。
-// 現在のファイルでは、Google Apps Script (GAS) からJSONデータを取得し、
-// Chart.jsを使ってグラフを動的に描画します。
-
-const GAS_API_URL = 'https://script.google.com/a/macros/hiro.kindai.ac.jp/s/AKfycbw20uk14AdOpGG11X0ZSuDEGIj5GE4rwzGKdJS2qA0UqPf1Opa0Z0DNQ11DkgOjUFi9/exec';
+// Google Sheetsの公開CSV URL
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSeHULXLOaFxvakmmyevGv1mbrzV_FstZqpznxzaNemHQld-waZh7ryS6PmCcIwEUl3rExYVEleFqCE/pub?gid=1200791621&single=true&output=csv';
 
 document.addEventListener('DOMContentLoaded', function() {
     // ページロード時と、定期的にデータを取得して描画
-    fetchAndRenderData();
+    fetchAndProcessCSV();
     // リアルタイム更新（例: 5分ごと = 300000ミリ秒）
-    setInterval(fetchAndRenderData, 300000); 
+    setInterval(fetchAndProcessCSV, 300000); 
 });
 
-async function fetchAndRenderData() {
+// --- 1. CSVデータの取得とデコード ---
+async function fetchAndProcessCSV() {
     try {
-        // AJAXリクエストの実行
-        const response = await fetch(GAS_API_URL);
+        const response = await fetch(CSV_URL);
         
         if (!response.ok) {
             throw new Error(`HTTPエラー! ステータス: ${response.status}`);
         }
         
-        // JSONデータのパース
-        // 構造: {"today": [{"time": "...", "count": ...}, ...], "lastWeek": [...]} を想定
-        const crowdData = await response.json();
+        // 応答をバイナリデータ（ArrayBuffer）として取得
+        const buffer = await response.arrayBuffer();
+        
+        // ArrayBufferをUTF-8としてデコードし、文字化けを解消
+        const decoder = new TextDecoder('utf-8');
+        const csvText = decoder.decode(buffer);
+        
+        // CSVデータを解析
+        const parsedData = parseCSV(csvText);
         
         // データの描画関数を呼び出す
-        renderCharts(crowdData);
-        updateStatusMessage(crowdData);
+        renderCharts(parsedData);
+        updateStatusMessage(parsedData);
 
     } catch (error) {
-        console.error("データの取得または描画に失敗しました:", error);
+        console.error("データ取得または描画に失敗しました:", error);
         // エラーメッセージをユーザーに表示
         document.getElementById('today-status').textContent = '⚠️ データ取得エラー: グラフの表示に失敗しました。';
         document.getElementById('weekly-status').textContent = '⚠️ データ取得エラー: グラフの表示に失敗しました。';
@@ -39,11 +42,41 @@ async function fetchAndRenderData() {
 }
 
 
+// --- 2. CSV解析ロジック ---
+function parseCSV(csvText) {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return { timeLabels: [], todayCounts: [], lastWeekCounts: [] };
+
+    // ヘッダー行をスキップし、データ行のみを取得
+    const dataLines = lines.slice(1);
+    
+    const timeLabels = [];
+    const todayCounts = [];
+    const lastWeekCounts = [];
+    
+    // 各行を処理
+    dataLines.forEach(line => {
+        // カンマ区切りで分割。トリムで前後の空白を削除
+        const columns = line.split(',').map(col => col.trim());
+        
+        // Time, TodayCount, LastWeekCount の順序を想定
+        const time = columns[0];
+        const todayCount = parseInt(columns[1], 10); // 数値に変換
+        const lastWeekCount = parseInt(columns[2], 10); // 数値に変換
+
+        if (time && !isNaN(todayCount) && !isNaN(lastWeekCount)) {
+            timeLabels.push(time);
+            todayCounts.push(todayCount);
+            lastWeekCounts.push(lastWeekCount);
+        }
+    });
+
+    return { timeLabels, todayCounts, lastWeekCounts };
+}
+
+// --- 3. グラフ描画（Chart.js）ロジック ---
 function renderCharts(data) {
-    // 描画用のデータセットを抽出・整形
-    const timeLabels = data.today.map(item => item.time);
-    const todayCounts = data.today.map(item => item.count);
-    const lastWeekCounts = data.lastWeek.map(item => item.count);
+    const { timeLabels, todayCounts, lastWeekCounts } = data;
 
     // 既存のグラフがあれば破棄（リアルタイム更新のため）
     if (window.todayChart) window.todayChart.destroy();
@@ -124,21 +157,26 @@ function renderCharts(data) {
     });
 }
 
+// --- 4. ステータスメッセージの更新ロジック ---
 function updateStatusMessage(data) {
+    const { timeLabels, todayCounts, lastWeekCounts } = data;
+    
     // 最新のデータポイントを取得
-    const latest = data.today[data.today.length - 1];
-    if (latest) {
-        const status = latest.count >= 25 ? '「高」' : (latest.count >= 15 ? '「中」' : '「低」');
-        document.getElementById('today-status').innerHTML = `※ **現在時刻 ${latest.time}** の混雑度は<span style="color: ${latest.count >= 25 ? '#e74c3c' : '#3498db'}; font-weight: bold;">${status}</span>です。`;
+    const latestCount = todayCounts[todayCounts.length - 1];
+    const latestTime = timeLabels[timeLabels.length - 1];
+
+    if (latestCount !== undefined && latestTime) {
+        const status = latestCount >= 25 ? '「高」' : (latestCount >= 15 ? '「中」' : '「低」');
+        document.getElementById('today-status').innerHTML = `※ **現在時刻 ${latestTime}** の混雑度は<span style="color: ${latestCount >= 25 ? '#e74c3c' : '#3498db'}; font-weight: bold;">${status}</span>です。`;
     }
 
     // 比較メッセージを更新 (簡易的な判定)
-    const todayAvg = todayCounts.reduce((a, b) => a + b, 0) / todayCounts.length;
-    const lastWeekAvg = lastWeekCounts.reduce((a, b) => a + b, 0) / lastWeekCounts.length;
+    const todayAvg = todayCounts.reduce((a, b) => a + b, 0) / (todayCounts.length || 1);
+    const lastWeekAvg = lastWeekCounts.reduce((a, b) => a + b, 0) / (lastWeekCounts.length || 1);
     let comparisonText = '前週とほぼ同じ混雑傾向です。';
-    if (todayAvg > lastWeekAvg * 1.1) {
+    if (todayAvg > lastWeekAvg * 1.1 && todayAvg > 0) {
         comparisonText = '<span style="color: #e74c3c; font-weight: bold;">今週は前週よりも全体的に混雑しています。</span>';
-    } else if (todayAvg < lastWeekAvg * 0.9) {
+    } else if (todayAvg < lastWeekAvg * 0.9 && lastWeekAvg > 0) {
         comparisonText = '<span style="color: #3498db; font-weight: bold;">今週は前週よりも全体的に空いています。</span>';
     }
     document.getElementById('weekly-status').innerHTML = `※ ${comparisonText}`;
