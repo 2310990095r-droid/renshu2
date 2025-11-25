@@ -13,44 +13,26 @@
         <div class="graph-section">
             
             <div class="graph-card">
-                <h2>📊 現在の混雑状況 (1時間ごとのグラフ)</h2>
-                <div class="graph-area">
-                    <div class="bar-container">
-                        <div class="bar" style="height: 40%;"><span class="bar-value">12</span><span class="bar-label">14:40</span></div>
-                        <div class="bar" style="height: 55%;"><span class="bar-value">16</span><span class="bar-label">14:50</span></div>
-                        <div class="bar warning" style="height: 85%;"><span class="bar-value">25</span><span class="bar-label">15:00</span></div>
-                        <div class="bar warning" style="height: 95%;"><span class="bar-value">28</span><span class="bar-label">15:10</span></div>
-                        <div class="bar warning" style="height: 90%;"><span class="bar-value">27</span><span class="bar-label">15:20</span></div>
-                        <div class="bar" style="height: 75%;"><span class="bar-value">22</span><span class="bar-label">15:30</span></div>
-                        <div class="bar" style="height: 60%;"><span class="bar-value">18</span><span class="bar-label">15:40</span></div>
-                        <div class="bar" style="height: 45%;"><span class="bar-value">13</span><span class="bar-label">15:50</span></div>
-                        <div class="bar" style="height: 35%;"><span class="bar-value">10</span><span class="bar-label">16:00</span></div>
-                        <div class="bar" style="height: 30%;"><span class="bar-value">9</span><span class="bar-label">16:10</span></div>
-                    </div>
+                <h2>📊 現在の混雑状況 (今日)</h2>
+                <div class="graph-area" style="height: 300px;">
+                    <canvas id="todayCrowdChart"></canvas>
                 </div>
-                <p style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">※ 現在時刻 15:10 の混雑度は「高」です。</p>
+                <p id="today-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">データを読み込み中です...</p>
             </div>
 
             <div class="graph-card">
-                <h2>📈 前週の同じ曜日の混雑状況</h2>
-                <div class="graph-area">
-                    <div class="bar-container">
-                        <div class="bar" style="height: 50%;"><span class="bar-value">15</span><span class="bar-label">14:40</span></div>
-                        <div class="bar" style="height: 60%;"><span class="bar-value">18</span><span class="bar-label">14:50</span></div>
-                        <div class="bar warning" style="height: 90%;"><span class="bar-value">26</span><span class="bar-label">15:00</span></div>
-                        <div class="bar warning" style="height: 80%;"><span class="bar-value">23</span><span class="bar-label">15:10</span></div>
-                        <div class="bar warning" style="height: 85%;"><span class="bar-value">24</span><span class="bar-label">15:20</span></div>
-                        <div class="bar" style="height: 70%;"><span class="bar-value">20</span><span class="bar-label">15:30</span></div>
-                        <div class="bar" style="height: 65%;"><span class="bar-value">19</span><span class="bar-label">15:40</span></div>
-                        <div class="bar" style="height: 50%;"><span class="bar-value">15</span><span class="bar-label">15:50</span></div>
-                        <div class="bar" style="height: 40%;"><span class="bar-value">12</span><span class="bar-label">16:00</span></div>
-                        <div class="bar" style="height: 30%;"><span class="bar-value">9</span><span class="bar-label">16:10</span></div>
-                    </div>
+                <h2>📈 前週の同じ曜日の混雑状況 (比較)</h2>
+                <div class="graph-area" style="height: 300px;">
+                    <canvas id="weeklyComparisonChart"></canvas>
                 </div>
-                <p style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">※ 今週は前週よりも全体的に若干混雑しています。</p>
+                <p id="weekly-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">データを読み込み中です...</p>
             </div>
+
         </div>
         
-        </div>
-    </body>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
 </html>
