@@ -1,66 +1,64 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>ジム混雑状況ダッシュボード</title>
-    <link rel="stylesheet" href="style.css"> 
-    </head>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Chart.js（1回だけ UMD ビルド） -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
 <body>
     <div class="container">
         <h1>🏋️ ジム混雑状況ダッシュボード 🚀</h1>
         
-        <div class="graph-section">
+        <!-- 今日の混雑 -->
+        <div class="graph-card">
+            <h2>📊 現在の混雑状況 (今日)</h2>
+            <div class="graph-area" style="height: 300px;">
+                <canvas id="todayCrowdChart"></canvas>
+            </div>
+            <p id="today-status" class="status-text">データを読み込み中です...</p>
+        </div>
+
+        <!-- 先週の同じ曜日比較 -->
+        <div class="graph-card">
+            <h2>📈 前週の同じ曜日の混雑状況 (比較)</h2>
+            <div class="graph-area" style="height: 300px;">
+                <canvas id="weeklyComparisonChart"></canvas>
+            </div>
+            <p id="weekly-status" class="status-text">データを読み込み中です...</p>
+        </div>
+
+        <hr />
+
+        <!-- 曜日 × 時間帯統計 -->
+        <div class="graph-card-full">
+            <h2>🗓️ 曜日・時間帯別 平均混雑状況 (統計)</h2>
             
-            <div class="graph-card">
-                <h2>📊 現在の混雑状況 (今日)</h2>
-                <div class="graph-area" style="height: 300px;">
-                    <canvas id="todayCrowdChart"></canvas>
-                </div>
-                <p id="today-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">データを読み込み中です...</p>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <label><b>表示する曜日：</b></label>
+                <select id="dow-select">
+                    <option value="1">月曜日</option>
+                    <option value="2">火曜日</option>
+                    <option value="3">水曜日</option>
+                    <option value="4">木曜日</option>
+                    <option value="5">金曜日</option>
+                    <option value="6">土曜日</option>
+                    <option value="7">日曜日</option>
+                </select>
             </div>
 
-            <div class="graph-card">
-                <h2>📈 前週の同じ曜日の混雑状況 (比較)</h2>
-                <div class="graph-area" style="height: 300px;">
-                    <canvas id="weeklyComparisonChart"></canvas>
-                </div>
-                <p id="weekly-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">データを読み込み中です...</p>
+            <div class="graph-area" style="height: 400px;">
+                <canvas id="weeklyStatsChart"></canvas>
             </div>
-
+            <p id="stats-status" class="status-text">統計データを読み込み中です...</p>
         </div>
-        
-        <hr style="margin: 40px 0;">
-
-        <div class="graph-section-full" id="stats-container">
-            <div class="graph-card-full">
-                <h2>🗓️ 曜日・時間帯別 平均混雑状況 (過去の統計)</h2>
-                
-                <div id="day-selector" style="text-align: center; margin-bottom: 20px;">
-                    <label style="font-weight: bold;">表示する曜日：</label>
-                    <select id="dow-select">
-                        <option value="1">月曜日</option>
-                        <option value="2">火曜日</option>
-                        <option value="3">水曜日</option>
-                        <option value="4">木曜日</option>
-                        <option value="5">金曜日</option>
-                        <option value="6">土曜日</option>
-                        <option value="7">日曜日</option>
-                    </select>
-                </div>
-
-                <div class="graph-area" style="height: 400px;">
-                    <canvas id="weeklyStatsChart"></canvas>
-                </div>
-
-                <p id="stats-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">統計データを読み込み中です...</p>
-            </div>
-        </div>
-        
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- あなたのグラフ生成ロジック（後述の完全版 script.js） -->
     <script src="script.js"></script>
 </body>
 </html>
