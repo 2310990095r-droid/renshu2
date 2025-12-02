@@ -1,141 +1,161 @@
-// Google Sheetsの公開 JSON URL (既存のCSV URLとは別)
-// 統計データ取得のため、GAS側でJSONを返すロジックが必要です (例: doGet?mode=by_dow_hour)
-// 今回は提供されたURLをそのまま使用し、JSON形式で返ってくることを前提とします。
+// === 設定 ===
 const STATS_URL = 'https://script.google.com/macros/s/AKfycbyonfBxtUhtzZJ8HU4suXqyxtu3JRAzaH3Bwl8zQbeh6dvwc6KUeb_jn_hg9hrjslxK/exec';
-
+const DOW_MAP = {1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日',7:'日曜日'};
 let allStatsData = [];
-let statsChart = null; // Chartインスタンスを保持
+let statsChart = null;
+const BUSINESS_START = 9;
+const BUSINESS_END = 19;
 
-// 曜日のマッピング
-const DOW_MAP = {
-    1: '月曜日', 2: '火曜日', 3: '水曜日', 4: '木曜日', 5: '金曜日', 6: '土曜日', 7: '日曜日'
-};
-
+// === 初期化 ===
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. データ取得
-    fetchAndProcessStats();
-    
-    // 2. 曜日選択UIにイベントリスナーを設定
-    const selectElement = document.getElementById('dow-select');
-    if (selectElement) {
-        // デフォルトで今日の曜日を選択する (JavaScriptのgetDay()は日:0〜土:6)
-        const currentDow = new Date().getDay() || 7; // 日曜 (0) を 7 に変換
-        selectElement.value = currentDow.toString();
-        
-        // 選択が変更されたらグラフを再描画
-        selectElement.addEventListener('change', function() {
-            renderStatsChart(parseInt(this.value));
-        });
-    }
+  fetchAndProcessStats();
+
+  const selectElement = document.getElementById('dow-select');
+  if (selectElement) {
+    // JSのgetDay(): 0=日..6=土 -> convert 0 to 7
+    const raw = new Date().getDay();
+    const currentDow = (raw === 0) ? 7 : raw;
+    selectElement.value = String(currentDow);
+
+    selectElement.addEventListener('change', function() {
+      const v = parseInt(this.value);
+      renderStatsChart(Number.isNaN(v) ? currentDow : v);
+    });
+  }
 });
 
-
-// --- 1. JSONデータの取得と解析 ---
+// === fetch + parse ===
 async function fetchAndProcessStats() {
-    try {
-        // GAS URLにモードパラメータを付けて、JSON応答を期待する (GAS側の対応が必要)
-        const response = await fetch(STATS_URL + '?mode=by_dow_hour'); 
-        
-        if (!response.ok) {
-            throw new Error(`HTTPエラー! ステータス: ${response.status}`);
-        }
-        
-        // JSONデータを取得
-        const data = await response.json(); 
-        
-        // データ構造の検証
-        if (data && Array.isArray(data.by_dow_hour)) {
-            allStatsData = data.by_dow_hour;
-            document.getElementById('stats-status').textContent = '✅ 統計データを読み込みました。';
+  try {
+    const url = STATS_URL + '?mode=by_dow_hour';
+    const resp = await fetch(url, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
 
-            // 初期描画: 選択されている曜日のグラフを表示
-            const initialDow = parseInt(document.getElementById('dow-select').value);
-            renderStatsChart(initialDow);
-        } else {
-            throw new Error("JSONデータに 'by_dow_hour' の配列が見つかりません。");
-        }
+    const data = await resp.json();
+    // If API returns { error: "..." }
+    if (data && data.error) throw new Error('API error: ' + data.error);
 
-    } catch (error) {
-        console.error("統計データ取得または解析に失敗しました:", error);
-        document.getElementById('stats-status').textContent = '⚠️ 統計データ取得エラー: グラフを表示できません。GASの出力形式を確認してください。';
+    if (!data || !Array.isArray(data.by_dow_hour)) {
+      throw new Error("Invalid JSON: no 'by_dow_hour' array");
     }
+
+    // normalize: ensure numeric types and map into simple structure
+    allStatsData = data.by_dow_hour.map(item => ({
+      hour: Number(item.hour),
+      dow: Number(item.dow),
+      avg_current: (item.avg_current === null || item.avg_current === '' ? null : Number(item.avg_current)),
+      max_current: (item.max_current === null || item.max_current === '' ? null : Number(item.max_current)),
+      samples: Number(item.samples || 0)
+    }));
+
+    document.getElementById('stats-status').textContent = '✅ 統計データを読み込みました。';
+
+    // 初期描画
+    const initialDow = parseInt(document.getElementById('dow-select').value);
+    renderStatsChart(Number.isNaN(initialDow) ? (new Date().getDay()||7) : initialDow);
+
+  } catch (err) {
+    console.error('fetchAndProcessStats error:', err);
+    const el = document.getElementById('stats-status');
+    if (el) el.textContent = '⚠️ 統計データ取得エラー: ' + (err.message || err);
+  }
 }
 
-
-// --- 2. グラフ描画（Chart.js）ロジック ---
+// === 描画関数（9〜19 を必ず表示する） ===
 function renderStatsChart(selectedDow) {
-    if (allStatsData.length === 0) return;
+  if (!Array.isArray(allStatsData) || allStatsData.length === 0) {
+    console.warn('no data to render');
+    return;
+  }
 
-    // 選択された曜日のデータのみをフィルタリング
-    const filteredData = allStatsData
-        .filter(item => item.dow === selectedDow && item.hour >= 9 && item.hour <= 19)
-        .sort((a, b) => a.hour - b.hour); // 時間でソート
+  // build buckets for hours 9..19 (to avoid missing-hour mismatch)
+  const hours = [];
+  for (let h = BUSINESS_START; h <= BUSINESS_END; h++) hours.push(h);
 
-    // グラフ用データの準備
-    const labels = filteredData.map(item => `${item.hour}:00`);
-    const avgData = filteredData.map(item => item.avg);
-    const maxData = filteredData.map(item => item.max);
-    
-    const dayName = DOW_MAP[selectedDow];
+  // prepare arrays filled with nulls
+  const avgArr = hours.map(() => null);
+  const maxArr = hours.map(() => null);
+  const samplesArr = hours.map(() => 0);
 
-    // 既存のグラフがあれば破棄
-    if (statsChart) statsChart.destroy();
+  // fill from data (multiple entries shouldn't exist for same dow/hour but merge if they do)
+  const filtered = allStatsData.filter(it => Number(it.dow) === Number(selectedDow));
+  filtered.forEach(it => {
+    if (it.hour < BUSINESS_START || it.hour > BUSINESS_END) return;
+    const idx = it.hour - BUSINESS_START;
+    // if multiple entries exist, take average of avg_current? We'll merge by weighted average:
+    if (it.avg_current !== null) {
+      if (avgArr[idx] === null) {
+        avgArr[idx] = it.avg_current;
+      } else {
+        // merge by simple average of the two values (or use samples weighting if you prefer)
+        avgArr[idx] = ( (avgArr[idx] || 0) + it.avg_current ) / 2;
+      }
+    }
+    if (it.max_current !== null) {
+      if (maxArr[idx] === null) maxArr[idx] = it.max_current;
+      else maxArr[idx] = Math.max(maxArr[idx], it.max_current);
+    }
+    samplesArr[idx] = (samplesArr[idx] || 0) + (Number(it.samples) || 0);
+  });
 
-    const ctx = document.getElementById('weeklyStatsChart').getContext('2d');
-    statsChart = new Chart(ctx, {
-        type: 'bar', // 棒グラフ
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '平均人数 (avg_current)',
-                    data: avgData,
-                    backgroundColor: 'rgba(52, 152, 219, 0.7)', // 青
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    borderWidth: 1,
-                    type: 'bar', // 棒グラフとして描画
-                    order: 2
-                },
-                {
-                    label: '最大人数 (max_current)',
-                    data: maxData,
-                    borderColor: 'rgba(231, 76, 60, 1)', // 赤
-                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
-                    type: 'line', // 折れ線グラフとして描画
-                    fill: true,
-                    tension: 0.2,
-                    order: 1 // 平均より手前に表示
-                }
-            ]
+  const labels = hours.map(h => `${h}:00`);
+  const avgData = avgArr.map(v => v === null ? NaN : v); // Chart.js treats NaN as gap
+  const maxData = maxArr.map(v => v === null ? NaN : v);
+
+  const dayName = DOW_MAP[selectedDow] || `曜日 ${selectedDow}`;
+
+  // destroy existing chart
+  if (statsChart) {
+    try { statsChart.destroy(); } catch(e){/*ignore*/ }
+  }
+
+  const ctx = document.getElementById('weeklyStatsChart').getContext('2d');
+  statsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '平均人数 (avg_current)',
+          data: avgData,
+          backgroundColor: avgData.map(v => isNaN(v) ? 'rgba(200,200,200,0.15)' : 'rgba(52,152,219,0.8)'),
+          borderColor: 'rgba(52,152,219,1)',
+          borderWidth: 1,
+          order: 2
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00)`,
-                    font: { size: 16 }
-                },
-                tooltip: {
-                    callbacks: {
-                        afterLabel: function(context) {
-                            const dataIndex = context.dataIndex;
-                            const samples = filteredData[dataIndex].samples;
-                            return `サンプル数: ${samples}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: '人数'
-                    }
-                }
-            }
+        {
+          label: '最大人数 (max_current)',
+          data: maxData,
+          type: 'line',
+          borderColor: 'rgba(231,76,60,1)',
+          backgroundColor: 'rgba(231,76,60,0.12)',
+          fill: true,
+          tension: 0.2,
+          order: 1
         }
-    });
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: { display: true, text: ${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00) },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const idx = ctx.dataIndex;
+              const dsLabel = ctx.dataset.label || '';
+              const v = ctx.dataset.data[idx];
+              const valText = (v === null || isNaN(v)) ? 'データ無し' : `${v}`;
+              const samples = samplesArr[idx] || 0;
+              return `${dsLabel}: ${valText} （samples: ${samples}）`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '人数' } }
+      }
+    }
+  });
 }
