@@ -30,6 +30,33 @@
 
         </div>
         
+        <hr style="margin: 40px 0;">
+
+        <div class="graph-section-full" id="stats-container">
+            <div class="graph-card-full">
+                <h2>🗓️ 曜日・時間帯別 平均混雑状況 (過去の統計)</h2>
+                
+                <div id="day-selector" style="text-align: center; margin-bottom: 20px;">
+                    <label style="font-weight: bold;">表示する曜日：</label>
+                    <select id="dow-select">
+                        <option value="1">月曜日</option>
+                        <option value="2">火曜日</option>
+                        <option value="3">水曜日</option>
+                        <option value="4">木曜日</option>
+                        <option value="5">金曜日</option>
+                        <option value="6">土曜日</option>
+                        <option value="7">日曜日</option>
+                    </select>
+                </div>
+
+                <div class="graph-area" style="height: 400px;">
+                    <canvas id="weeklyStatsChart"></canvas>
+                </div>
+
+                <p id="stats-status" style="text-align: center; font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">統計データを読み込み中です...</p>
+            </div>
+        </div>
+        
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
