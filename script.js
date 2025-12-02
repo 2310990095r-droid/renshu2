@@ -1,146 +1,132 @@
-// script.js
+// Google Sheetsの公開 JSON URL (既存のCSV URLとは別)
+// 統計データ取得のため、GAS側でJSONを返すロジックが必要です (例: doGet?mode=by_dow_hour)
+// 今回は提供されたURLをそのまま使用し、JSON形式で返ってくることを前提とします。
+const STATS_URL = 'https://script.google.com/macros/s/AKfycbyonfBxtUhtzZJ8HU4suXqyxtu3JRAzaH3Bwl8zQbeh6dvwc6KUeb_jn_hg9hrjslxK/exec';
 
-// Google Sheetsの公開CSV URL
-const CSV_URL = 'https://script.google.com/macros/s/AKfycbyonfBxtUhtzZJ8HU4suXqyxtu3JRAzaH3Bwl8zQbeh6dvwc6KUeb_jn_hg9hrjslxK/exec';
+let allStatsData = [];
+let statsChart = null; // Chartインスタンスを保持
+
+// 曜日のマッピング
+const DOW_MAP = {
+    1: '月曜日', 2: '火曜日', 3: '水曜日', 4: '木曜日', 5: '金曜日', 6: '土曜日', 7: '日曜日'
+};
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ページロード時と、定期的にデータを取得して描画
-    fetchAndProcessCSV();
-    // リアルタイム更新（例: 5分ごと = 300000ミリ秒）
-    setInterval(fetchAndProcessCSV, 300000); 
+    // 1. データ取得
+    fetchAndProcessStats();
+    
+    // 2. 曜日選択UIにイベントリスナーを設定
+    const selectElement = document.getElementById('dow-select');
+    if (selectElement) {
+        // デフォルトで今日の曜日を選択する (JavaScriptのgetDay()は日:0〜土:6)
+        const currentDow = new Date().getDay() || 7; // 日曜 (0) を 7 に変換
+        selectElement.value = currentDow.toString();
+        
+        // 選択が変更されたらグラフを再描画
+        selectElement.addEventListener('change', function() {
+            renderStatsChart(parseInt(this.value));
+        });
+    }
 });
 
-// --- 1. CSVデータの取得とデコード (response.text()でロバスト化) ---
-async function fetchAndProcessCSV() {
+
+// --- 1. JSONデータの取得と解析 ---
+async function fetchAndProcessStats() {
     try {
-        const response = await fetch(CSV_URL);
+        // GAS URLにモードパラメータを付けて、JSON応答を期待する (GAS側の対応が必要)
+        const response = await fetch(STATS_URL + '?mode=by_dow_hour'); 
         
         if (!response.ok) {
             throw new Error(`HTTPエラー! ステータス: ${response.status}`);
         }
         
-        // 以前の ArrayBuffer + TextDecoder によるデコードの代わりに
-        // response.text() を使用して、エンコーディング自動判別による文字化けを防ぐ
-        const csvText = await response.text();
+        // JSONデータを取得
+        const data = await response.json(); 
         
-        // CSVデータを解析
-        const parsedData = parseCSV(csvText);
-        
-        // データの描画関数を呼び出す
-        renderCharts(parsedData);
-        updateStatusMessage(parsedData);
+        // データ構造の検証
+        if (data && Array.isArray(data.by_dow_hour)) {
+            allStatsData = data.by_dow_hour;
+            document.getElementById('stats-status').textContent = '✅ 統計データを読み込みました。';
+
+            // 初期描画: 選択されている曜日のグラフを表示
+            const initialDow = parseInt(document.getElementById('dow-select').value);
+            renderStatsChart(initialDow);
+        } else {
+            throw new Error("JSONデータに 'by_dow_hour' の配列が見つかりません。");
+        }
 
     } catch (error) {
-        console.error("データ取得または描画に失敗しました:", error);
-        // エラーメッセージをユーザーに表示
-        document.getElementById('today-status').textContent = '⚠️ データ取得エラー: グラフの表示に失敗しました。';
-        document.getElementById('weekly-status').textContent = '⚠️ データ取得エラー: グラフの表示に失敗しました。';
+        console.error("統計データ取得または解析に失敗しました:", error);
+        document.getElementById('stats-status').textContent = '⚠️ 統計データ取得エラー: グラフを表示できません。GASの出力形式を確認してください。';
     }
 }
 
 
-// --- 2. CSV解析ロジック ---
-function parseCSV(csvText) {
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) return { timeLabels: [], todayCounts: [], lastWeekCounts: [] };
+// --- 2. グラフ描画（Chart.js）ロジック ---
+function renderStatsChart(selectedDow) {
+    if (allStatsData.length === 0) return;
 
-    // ヘッダー行をスキップし、データ行のみを取得
-    const dataLines = lines.slice(1);
+    // 選択された曜日のデータのみをフィルタリング
+    const filteredData = allStatsData
+        .filter(item => item.dow === selectedDow && item.hour >= 9 && item.hour <= 19)
+        .sort((a, b) => a.hour - b.hour); // 時間でソート
+
+    // グラフ用データの準備
+    const labels = filteredData.map(item => `${item.hour}:00`);
+    const avgData = filteredData.map(item => item.avg);
+    const maxData = filteredData.map(item => item.max);
     
-    const timeLabels = [];
-    const todayCounts = [];
-    const lastWeekCounts = [];
-    
-    // 各行を処理
-    dataLines.forEach(line => {
-        // カンマ区切りで分割。トリムで前後の空白を削除
-        const columns = line.split(',').map(col => col.trim());
-        
-        // Time, TodayCount, LastWeekCount の順序を想定
-        const time = columns[0];
-        const todayCount = parseInt(columns[1], 10); // 数値に変換
-        const lastWeekCount = parseInt(columns[2], 10); // 数値に変換
+    const dayName = DOW_MAP[selectedDow];
 
-        if (time && !isNaN(todayCount) && !isNaN(lastWeekCount)) {
-            timeLabels.push(time);
-            todayCounts.push(todayCount);
-            lastWeekCounts.push(lastWeekCount);
-        }
-    });
+    // 既存のグラフがあれば破棄
+    if (statsChart) statsChart.destroy();
 
-    return { timeLabels, todayCounts, lastWeekCounts };
-}
-
-// --- 3. グラフ描画（Chart.js）ロジック ---
-function renderCharts(data) {
-    const { timeLabels, todayCounts, lastWeekCounts } = data;
-
-    // 既存のグラフがあれば破棄（リアルタイム更新のため）
-    if (window.todayChart) window.todayChart.destroy();
-    if (window.comparisonChart) window.comparisonChart.destroy();
-
-    // --- 1. 今日の混雑状況グラフ (棒グラフ) ---
-    const todayCtx = document.getElementById('todayCrowdChart').getContext('2d');
-    window.todayChart = new Chart(todayCtx, {
-        type: 'bar',
+    const ctx = document.getElementById('weeklyStatsChart').getContext('2d');
+    statsChart = new Chart(ctx, {
+        type: 'bar', // 棒グラフ
         data: {
-            labels: timeLabels,
-            datasets: [{
-                label: '今日の人数',
-                data: todayCounts,
-                backgroundColor: todayCounts.map(count => count >= 25 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(52, 152, 219, 0.7)'), // 25人以上で赤色に
-                borderColor: todayCounts.map(count => count >= 25 ? 'rgba(231, 76, 60, 1)' : 'rgba(52, 152, 219, 1)'),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: '人数'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false // 凡例を非表示
-                }
-            }
-        }
-    });
-
-    // --- 2. 前週との比較グラフ (折れ線グラフ) ---
-    const comparisonCtx = document.getElementById('weeklyComparisonChart').getContext('2d');
-    window.comparisonChart = new Chart(comparisonCtx, {
-        type: 'line', // 折れ線グラフ
-        data: {
-            labels: timeLabels,
+            labels: labels,
             datasets: [
                 {
-                    label: '今日の人数',
-                    data: todayCounts,
-                    borderColor: 'rgba(231, 76, 60, 1)', // #e74c3c
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    fill: false,
-                    tension: 0.3
+                    label: '平均人数 (avg_current)',
+                    data: avgData,
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)', // 青
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1,
+                    type: 'bar', // 棒グラフとして描画
+                    order: 2
                 },
                 {
-                    label: '前週の人数',
-                    data: lastWeekCounts,
-                    borderColor: 'rgba(52, 152, 219, 1)', // #3498db
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    fill: false,
-                    tension: 0.3
+                    label: '最大人数 (max_current)',
+                    data: maxData,
+                    borderColor: 'rgba(231, 76, 60, 1)', // 赤
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    type: 'line', // 折れ線グラフとして描画
+                    fill: true,
+                    tension: 0.2,
+                    order: 1 // 平均より手前に表示
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: `${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00)`,
+                    font: { size: 16 }
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const dataIndex = context.dataIndex;
+                            const samples = filteredData[dataIndex].samples;
+                            return `サンプル数: ${samples}`;
+                        }
+                    }
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
@@ -152,31 +138,4 @@ function renderCharts(data) {
             }
         }
     });
-}
-
-// --- 4. ステータスメッセージの更新ロジック ---
-function updateStatusMessage(data) {
-    const { timeLabels, todayCounts, lastWeekCounts } = data;
-    
-    // 最新のデータポイントを取得
-    const latestCount = todayCounts[todayCounts.length - 1];
-    const latestTime = timeLabels[timeLabels.length - 1];
-
-    if (latestCount !== undefined && latestTime) {
-        const status = latestCount >= 25 ? '「高」' : (latestCount >= 15 ? '「中」' : '「低」');
-        document.getElementById('today-status').innerHTML = `※ **現在時刻 ${latestTime}** の混雑度は<span style="color: ${latestCount >= 25 ? '#e74c3c' : '#3498db'}; font-weight: bold;">${status}</span>です。`;
-    } else {
-        document.getElementById('today-status').textContent = '⚠️ データが取得できていません。';
-    }
-
-    // 比較メッセージを更新 (簡易的な判定)
-    const todayAvg = todayCounts.reduce((a, b) => a + b, 0) / (todayCounts.length || 1);
-    const lastWeekAvg = lastWeekCounts.reduce((a, b) => a + b, 0) / (lastWeekCounts.length || 1);
-    let comparisonText = '前週とほぼ同じ混雑傾向です。';
-    if (todayAvg > lastWeekAvg * 1.1 && todayAvg > 0) {
-        comparisonText = '<span style="color: #e74c3c; font-weight: bold;">今週は前週よりも全体的に混雑しています。</span>';
-    } else if (todayAvg < lastWeekAvg * 0.9 && lastWeekAvg > 0) {
-        comparisonText = '<span style="color: #3498db; font-weight: bold;">今週は前週よりも全体的に空いています。</span>';
-    }
-    document.getElementById('weekly-status').innerHTML = `※ ${comparisonText}`;
 }
