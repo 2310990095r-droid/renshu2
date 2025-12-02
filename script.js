@@ -1,7 +1,7 @@
 // script.js
 
 // Google Sheetsの公開CSV URL
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSeHULXLOaFxvakmmyevGv1mbrzV_FstZqpznxzaNemHQld-waZh7ryS6PmCcIwEUl3rExYVEleFqCE/pub?gid=1200791621&single=true&output=csv';
+const CSV_URL = 'https://script.google.com/macros/s/AKfycby-R-LfC8SHI0_HYOQWEtrhl908pgBKdyZ_6PgjJC5aascP10jb89fp_FcoaySJYZtG/exec';
 
 document.addEventListener('DOMContentLoaded', function() {
     // ページロード時と、定期的にデータを取得して描画
