@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(fetchAndProcessCSV, 300000); 
 });
 
-// --- 1. CSVデータの取得とデコード ---
+// --- 1. CSVデータの取得とデコード (response.text()でロバスト化) ---
 async function fetchAndProcessCSV() {
     try {
         const response = await fetch(CSV_URL);
@@ -19,12 +19,9 @@ async function fetchAndProcessCSV() {
             throw new Error(`HTTPエラー! ステータス: ${response.status}`);
         }
         
-        // 応答をバイナリデータ（ArrayBuffer）として取得
-        const buffer = await response.arrayBuffer();
-        
-        // ArrayBufferをUTF-8としてデコードし、文字化けを解消
-        const decoder = new TextDecoder('utf-8');
-        const csvText = decoder.decode(buffer);
+        // 以前の ArrayBuffer + TextDecoder によるデコードの代わりに
+        // response.text() を使用して、エンコーディング自動判別による文字化けを防ぐ
+        const csvText = await response.text();
         
         // CSVデータを解析
         const parsedData = parseCSV(csvText);
@@ -168,6 +165,8 @@ function updateStatusMessage(data) {
     if (latestCount !== undefined && latestTime) {
         const status = latestCount >= 25 ? '「高」' : (latestCount >= 15 ? '「中」' : '「低」');
         document.getElementById('today-status').innerHTML = `※ **現在時刻 ${latestTime}** の混雑度は<span style="color: ${latestCount >= 25 ? '#e74c3c' : '#3498db'}; font-weight: bold;">${status}</span>です。`;
+    } else {
+        document.getElementById('today-status').textContent = '⚠️ データが取得できていません。';
     }
 
     // 比較メッセージを更新 (簡易的な判定)
