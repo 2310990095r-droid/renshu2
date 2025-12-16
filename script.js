@@ -3,13 +3,26 @@ const STATS_URL = 'https://script.google.com/macros/s/AKfycbyonfBxtUhtzZJ8HU4suX
 const DOW_MAP = {1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日',7:'日曜日'};
 let allStatsData = [];
 let statsChart = null;
+let todayCrowdChart = null;
+let weeklyComparisonChart = null;
+
 const BUSINESS_START = 9;
 const BUSINESS_END = 19;
+const UPDATE_INTERVAL_MS = 30000; // 30秒ごとに今日の混雑グラフを更新
 
 // === 初期化 ===
 document.addEventListener('DOMContentLoaded', function() {
+  // 統計データ（曜日・時間帯別）の取得と初期描画
   fetchAndProcessStats();
 
+  // リアルタイム/比較データの取得と定期更新
+  fetchTodayCrowdData();
+  fetchWeeklyComparisonData();
+  
+  // 今日の混雑状況グラフを定期的に更新（リアルタイム性）
+  setInterval(fetchTodayCrowdData, UPDATE_INTERVAL_MS);
+
+  // 曜日選択ドロップダウンの処理
   const selectElement = document.getElementById('dow-select');
   if (selectElement) {
     // JSのgetDay(): 0=日..6=土 -> convert 0 to 7
@@ -24,7 +37,174 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// === fetch + parse ===
+
+// =========================================================
+// === 1. 今日の混雑状況 (リアルタイム) ===
+// =========================================================
+
+async function fetchTodayCrowdData() {
+  const statusEl = document.getElementById('today-status');
+  try {
+    const url = STATS_URL + '?mode=today_crowd'; // APIモードを仮定
+    const resp = await fetch(url, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    
+    // データ構造: [{ hour: 9, current: 10 }, { hour: 10, current: 15 }, ...]
+    const data = await resp.json(); 
+    if (data && data.error) throw new Error('API error: ' + data.error);
+    if (!data || !Array.isArray(data.crowd_data)) throw new Error("Invalid JSON: no 'crowd_data' array");
+    
+    const crowdData = data.crowd_data.map(item => ({
+      hour: Number(item.hour),
+      current: Number(item.current)
+    }));
+    
+    // 現在の混雑状況のテキスト更新 (最新の値を取得)
+    const latestCrowd = crowdData.length > 0 ? crowdData[crowdData.length - 1].current : '不明';
+    const currentTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    statusEl.textContent = `✅ ${currentTime} 現在の人数: ${latestCrowd}人 (${UPDATE_INTERVAL_MS/1000}秒ごとに更新中)`;
+    
+    renderTodayCrowdChart(crowdData);
+
+  } catch (err) {
+    console.error('fetchTodayCrowdData error:', err);
+    statusEl.textContent = '⚠️ 今日のデータ取得エラー: ' + (err.message || err);
+  }
+}
+
+function renderTodayCrowdChart(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    // データがない場合の処理
+    if (todayCrowdChart) todayCrowdChart.destroy();
+    return;
+  }
+  
+  const labels = data.map(d => `${d.hour}:00`);
+  const crowdValues = data.map(d => d.current);
+  
+  if (todayCrowdChart) {
+    try { todayCrowdChart.destroy(); } catch(e){/*ignore*/ }
+  }
+
+  const ctx = document.getElementById('todayCrowdChart').getContext('2d');
+  todayCrowdChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '現在の人数',
+        data: crowdValues,
+        borderColor: 'rgba(46, 204, 113, 1)',
+        backgroundColor: 'rgba(46, 204, 113, 0.2)',
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: { display: true, text: '今日のリアルタイム混雑状況' },
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '人数' } }
+      }
+    }
+  });
+}
+
+
+// =========================================================
+// === 2. 前週の同じ曜日比較 ===
+// =========================================================
+
+async function fetchWeeklyComparisonData() {
+  const statusEl = document.getElementById('weekly-status');
+  try {
+    const url = STATS_URL + '?mode=weekly_comparison'; // APIモードを仮定
+    const resp = await fetch(url, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    
+    // データ構造: { today: [...], lastWeek: [...] } 
+    // 各配列は: [{ hour: 9, current: 10 }, ...]
+    const data = await resp.json(); 
+    if (data && data.error) throw new Error('API error: ' + data.error);
+    if (!data || !Array.isArray(data.today) || !Array.isArray(data.lastWeek)) {
+      throw new Error("Invalid JSON for comparison data");
+    }
+    
+    statusEl.textContent = '✅ 前週比較データを読み込みました。';
+    
+    renderWeeklyComparisonChart(data.today, data.lastWeek);
+
+  } catch (err) {
+    console.error('fetchWeeklyComparisonData error:', err);
+    statusEl.textContent = '⚠️ 前週比較データ取得エラー: ' + (err.message || err);
+  }
+}
+
+function renderWeeklyComparisonChart(todayData, lastWeekData) {
+  // 比較のため、データを時間帯ラベルで揃える（ここでは今日データに合わせています）
+  const labels = todayData.map(d => `${d.hour}:00`);
+  const todayValues = todayData.map(d => d.current);
+  
+  // lastWeekDataから対応する時間帯の値を取得（時間帯が一致しない場合はnull）
+  const lastWeekMap = new Map(lastWeekData.map(d => [`${d.hour}:00`, d.current]));
+  const lastWeekValues = labels.map(label => lastWeekMap.get(label) || NaN); // NaNでデータがないことを示す
+
+  if (weeklyComparisonChart) {
+    try { weeklyComparisonChart.destroy(); } catch(e){/*ignore*/ }
+  }
+
+  const ctx = document.getElementById('weeklyComparisonChart').getContext('2d');
+  weeklyComparisonChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '今日',
+          data: todayValues,
+          borderColor: 'rgba(52, 152, 219, 1)',
+          backgroundColor: 'rgba(52, 152, 219, 0.1)',
+          tension: 0.2,
+          fill: false,
+          pointRadius: 4,
+          borderWidth: 2
+        },
+        {
+          label: '先週の同じ曜日',
+          data: lastWeekValues,
+          borderColor: 'rgba(230, 126, 34, 1)',
+          backgroundColor: 'rgba(230, 126, 34, 0.1)',
+          tension: 0.2,
+          fill: false,
+          borderDash: [5, 5],
+          pointRadius: 3,
+          borderWidth: 1.5
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: { display: true, text: '今日 vs 先週の同じ曜日' }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '人数' } }
+      }
+    }
+  });
+}
+
+
+// =========================================================
+// === 3. 曜日・時間帯別 平均混雑状況 (統計) - 元のコードを保持 ===
+// =========================================================
+
+// fetch + parse
 async function fetchAndProcessStats() {
   try {
     const url = STATS_URL + '?mode=by_dow_hour';
@@ -61,7 +241,7 @@ async function fetchAndProcessStats() {
   }
 }
 
-// === 描画関数（9〜19 を必ず表示する） ===
+// 描画関数（9〜19 を必ず表示する）
 function renderStatsChart(selectedDow) {
   if (!Array.isArray(allStatsData) || allStatsData.length === 0) {
     console.warn('no data to render');
@@ -139,7 +319,7 @@ function renderStatsChart(selectedDow) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: ${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00) },
+        title: { display: true, text: `${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00)` },
         tooltip: {
           callbacks: {
             label: (ctx) => {
