@@ -1,341 +1,270 @@
 // === 設定 ===
-const STATS_URL = 'https://script.google.com/macros/s/AKfycbyonfBxtUhtzZJ8HU4suXqyxtu3JRAzaH3Bwl8zQbeh6dvwc6KUeb_jn_hg9hrjslxK/exec';
-const DOW_MAP = {1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日',7:'日曜日'};
-let allStatsData = [];
-let statsChart = null;
-let todayCrowdChart = null;
-let weeklyComparisonChart = null;
-
+const STATS_URL = 'https://script.google.com/macros/s/XXXX/exec'; // ←あなたのURL
 const BUSINESS_START = 9;
 const BUSINESS_END = 19;
-const UPDATE_INTERVAL_MS = 30000; // 30秒ごとに今日の混雑グラフを更新
+const POLL_MS = 15000; // リアルタイム用ポーリング間隔
+
+const DOW_MAP = {1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日',7:'日曜日'};
+
+let allRows = [];        // 生データ全部
+let liveChart = null;    // 現在人数の推移（折れ線）
+let hourlyChart = null;  // 各時間 入室累計の最高値（棒グラフ）
 
 // === 初期化 ===
-document.addEventListener('DOMContentLoaded', function() {
-  // 統計データ（曜日・時間帯別）の取得と初期描画
-  fetchAndProcessStats();
-
-  // リアルタイム/比較データの取得と定期更新
-  fetchTodayCrowdData();
-  fetchWeeklyComparisonData();
-  
-  // 今日の混雑状況グラフを定期的に更新（リアルタイム性）
-  setInterval(fetchTodayCrowdData, UPDATE_INTERVAL_MS);
-
-  // 曜日選択ドロップダウンの処理
+document.addEventListener('DOMContentLoaded', () => {
   const selectElement = document.getElementById('dow-select');
-  if (selectElement) {
-    // JSのgetDay(): 0=日..6=土 -> convert 0 to 7
-    const raw = new Date().getDay();
-    const currentDow = (raw === 0) ? 7 : raw;
-    selectElement.value = String(currentDow);
 
-    selectElement.addEventListener('change', function() {
-      const v = parseInt(this.value);
-      renderStatsChart(Number.isNaN(v) ? currentDow : v);
+  // 今日の曜日 (JS:0=日→7に変換)
+  const jsDow = new Date().getDay();
+  const todayDow = (jsDow === 0 ? 7 : jsDow);
+
+  if (selectElement) {
+    selectElement.value = String(todayDow);
+    selectElement.addEventListener('change', () => {
+      const v = parseInt(selectElement.value);
+      const dow = Number.isNaN(v) ? todayDow : v;
+      renderForDow(dow);
     });
   }
+
+  // 初回取得
+  fetchAndProcess();
+
+  // ポーリングでリアルタイム更新（当日の曜日のみ効いてくる）
+  setInterval(fetchAndProcess, POLL_MS);
 });
 
-
-// =========================================================
-// === 1. 今日の混雑状況 (リアルタイム) ===
-// =========================================================
-
-async function fetchTodayCrowdData() {
-  const statusEl = document.getElementById('today-status');
+// === API から行データ取得 ===
+async function fetchAndProcess() {
   try {
-    const url = STATS_URL + '?mode=today_crowd'; // APIモードを仮定
-    const resp = await fetch(url, { cache: 'no-cache' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    
-    // データ構造: [{ hour: 9, current: 10 }, { hour: 10, current: 15 }, ...]
-    const data = await resp.json(); 
-    if (data && data.error) throw new Error('API error: ' + data.error);
-    if (!data || !Array.isArray(data.crowd_data)) throw new Error("Invalid JSON: no 'crowd_data' array");
-    
-    const crowdData = data.crowd_data.map(item => ({
-      hour: Number(item.hour),
-      current: Number(item.current)
-    }));
-    
-    // 現在の混雑状況のテキスト更新 (最新の値を取得)
-    const latestCrowd = crowdData.length > 0 ? crowdData[crowdData.length - 1].current : '不明';
-    const currentTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    statusEl.textContent = `✅ ${currentTime} 現在の人数: ${latestCrowd}人 (${UPDATE_INTERVAL_MS/1000}秒ごとに更新中)`;
-    
-    renderTodayCrowdChart(crowdData);
+    const resp = await fetch(STATS_URL + '?mode=raw', { cache: 'no-cache' }); // mode は自分の GAS に合わせる
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
 
-  } catch (err) {
-    console.error('fetchTodayCrowdData error:', err);
-    statusEl.textContent = '⚠️ 今日のデータ取得エラー: ' + (err.message || err);
+    const data = await resp.json();
+    if (!data || !Array.isArray(data.rows)) {
+      throw new Error("Invalid JSON: no 'rows' array");
+    }
+
+    // 正規化
+    allRows = data.rows.map(normalizeRow).filter(r => r !== null);
+
+    const status = document.getElementById('stats-status');
+    if (status) status.textContent = '✅ データ更新: ' + new Date().toLocaleTimeString();
+
+    // 現在選択中の曜日で描画
+    const selEl = document.getElementById('dow-select');
+    const jsDow = new Date().getDay();
+    const todayDow = (jsDow === 0 ? 7 : jsDow);
+    const rawSel = selEl ? parseInt(selEl.value) : todayDow;
+    const dow = Number.isNaN(rawSel) ? todayDow : rawSel;
+    renderForDow(dow);
+
+  } catch (e) {
+    console.error('fetchAndProcess error', e);
+    const status = document.getElementById('stats-status');
+    if (status) status.textContent = '⚠️ データ取得エラー: ' + (e.message || e);
   }
 }
 
-function renderTodayCrowdChart(data) {
-  if (!Array.isArray(data) || data.length === 0) {
-    // データがない場合の処理
-    if (todayCrowdChart) todayCrowdChart.destroy();
+// === 1行をスプレッドシートの列に合わせて整形 ===
+function normalizeRow(item) {
+  try {
+    // ここはあなたの Apps Script / シート列名に合わせて変更
+    const timeStr = item.record_time || item.記録時刻 || item.timestamp || item.slot15;
+    const enterCum = Number(item.enter_cum ?? item.入室累計 ?? 0);
+    const current = Number(item.current ?? item.現在人数 ?? 0);
+    const dow = Number(item.dow ?? item.曜日);
+    const hour = Number(item.hour ?? item.時);
+    const slotStr = item.slot15 ?? item['時刻15分'] ?? timeStr;
+
+    if (!timeStr || isNaN(dow) || isNaN(hour)) return null;
+
+    // 日付キー (YYYY-MM-DD) を文字列から抜く
+    const m = String(timeStr).match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
+    if (!m) return null;
+    const dateKey = `${m[1]}-${m[2]}-${m[3]}`;
+
+    // JS Date に変換（ブラウザのローカルタイムでOKとする）
+    const ts = new Date(timeStr);
+    const slotDate = new Date(slotStr);
+
+    return {
+      ts,
+      slotDate,
+      dateKey,
+      dow,
+      hour,
+      enterCum,
+      current
+    };
+  } catch (e) {
+    console.warn('normalizeRow error', e, item);
+    return null;
+  }
+}
+
+// === 曜日ごとの表示ロジック ===
+function renderForDow(selectedDow) {
+  if (!allRows.length) return;
+
+  const now = new Date();
+  const jsDow = now.getDay();
+  const todayDow = (jsDow === 0 ? 7 : jsDow);
+
+  // 曜日ごとに dateKey を集計
+  const rowsSameDow = allRows.filter(r => r.dow === selectedDow);
+  if (!rowsSameDow.length) {
+    console.warn('no data for dow', selectedDow);
+    destroyCharts();
     return;
   }
-  
-  const labels = data.map(d => `${d.hour}:00`);
-  const crowdValues = data.map(d => d.current);
-  
-  if (todayCrowdChart) {
-    try { todayCrowdChart.destroy(); } catch(e){/*ignore*/ }
+
+  // dateKeyごとにグループ化
+  const byDate = {};
+  for (const r of rowsSameDow) {
+    (byDate[r.dateKey] ??= []).push(r);
+  }
+  const dateKeys = Object.keys(byDate).sort(); // 昇順（古い→新しい）
+
+  // 今日の日付キー（normalizeRow で作った形式と合わせる）
+  const todayKeyMatch = now.toISOString().slice(0,10); // "YYYY-MM-DD"
+
+  let useDateKey;
+
+  if (selectedDow === todayDow && byDate[todayKeyMatch]) {
+    // ★ 条件1: 当日の曜日なら、その日のデータ（リアルタイムに増えていく想定）
+    useDateKey = todayKeyMatch;
+  } else {
+    // ★ 条件2: それ以外は「一番近いその曜日のグラフ」= 最も新しい dateKey
+    useDateKey = dateKeys[dateKeys.length - 1];
   }
 
-  const ctx = document.getElementById('todayCrowdChart').getContext('2d');
-  todayCrowdChart = new Chart(ctx, {
+  const rows = byDate[useDateKey] || [];
+  if (!rows.length) {
+    console.warn('no rows for chosen dateKey', useDateKey);
+    destroyCharts();
+    return;
+  }
+
+  // 時刻順にソート
+  rows.sort((a,b) => a.ts - b.ts);
+
+  // ---- グラフ用データ作成 ----
+
+  // ① 現在人数の推移（折れ線）
+  const liveLabels = rows.map(r =>
+    r.slotDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
+  const liveData = rows.map(r => r.current);
+
+  // ② 各時間の入室累計の最高値（棒）
+  const hours = [];
+  for (let h = BUSINESS_START; h <= BUSINESS_END; h++) hours.push(h);
+
+  const hourlyMaxEnter = hours.map(h => {
+    const inHour = rows.filter(r => r.hour === h);
+    if (!inHour.length) return null;
+    return Math.max(...inHour.map(r => r.enterCum));
+  });
+
+  const hourlyLabels = hours.map(h => `${h}:00`);
+
+  const dayName = DOW_MAP[selectedDow] || `曜日 ${selectedDow}`;
+  const isToday = (selectedDow === todayDow && useDateKey === todayKeyMatch);
+
+  renderLiveChart(dayName, isToday, useDateKey, liveLabels, liveData);
+  renderHourlyChart(dayName, isToday, useDateKey, hourlyLabels, hourlyMaxEnter);
+}
+
+// === 現在人数の推移（折れ線） ===
+function renderLiveChart(dayName, isToday, dateKey, labels, data) {
+  const canvas = document.getElementById('liveChart');
+  if (!canvas) return;
+
+  if (liveChart) {
+    try { liveChart.destroy(); } catch(e) {}
+  }
+
+  const ctx = canvas.getContext('2d');
+
+  liveChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
       datasets: [{
-        label: '現在の人数',
-        data: crowdValues,
-        borderColor: 'rgba(46, 204, 113, 1)',
-        backgroundColor: 'rgba(46, 204, 113, 0.2)',
-        tension: 0.3,
+        label: isToday ? '現在人数（リアルタイム）' : '現在人数（過去データ）',
+        data,
+        borderColor: 'rgba(52,152,219,1)',
+        backgroundColor: 'rgba(52,152,219,0.12)',
         fill: true,
+        tension: 0.2,
+        pointRadius: 2
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: '今日のリアルタイム混雑状況' },
-        legend: { display: false }
-      },
-      scales: {
-        y: { beginAtZero: true, title: { display: true, text: '人数' } }
-      }
-    }
-  });
-}
-
-
-// =========================================================
-// === 2. 前週の同じ曜日比較 ===
-// =========================================================
-
-async function fetchWeeklyComparisonData() {
-  const statusEl = document.getElementById('weekly-status');
-  try {
-    const url = STATS_URL + '?mode=weekly_comparison'; // APIモードを仮定
-    const resp = await fetch(url, { cache: 'no-cache' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    
-    // データ構造: { today: [...], lastWeek: [...] } 
-    // 各配列は: [{ hour: 9, current: 10 }, ...]
-    const data = await resp.json(); 
-    if (data && data.error) throw new Error('API error: ' + data.error);
-    if (!data || !Array.isArray(data.today) || !Array.isArray(data.lastWeek)) {
-      throw new Error("Invalid JSON for comparison data");
-    }
-    
-    statusEl.textContent = '✅ 前週比較データを読み込みました。';
-    
-    renderWeeklyComparisonChart(data.today, data.lastWeek);
-
-  } catch (err) {
-    console.error('fetchWeeklyComparisonData error:', err);
-    statusEl.textContent = '⚠️ 前週比較データ取得エラー: ' + (err.message || err);
-  }
-}
-
-function renderWeeklyComparisonChart(todayData, lastWeekData) {
-  // 比較のため、データを時間帯ラベルで揃える（ここでは今日データに合わせています）
-  const labels = todayData.map(d => `${d.hour}:00`);
-  const todayValues = todayData.map(d => d.current);
-  
-  // lastWeekDataから対応する時間帯の値を取得（時間帯が一致しない場合はnull）
-  const lastWeekMap = new Map(lastWeekData.map(d => [`${d.hour}:00`, d.current]));
-  const lastWeekValues = labels.map(label => lastWeekMap.get(label) || NaN); // NaNでデータがないことを示す
-
-  if (weeklyComparisonChart) {
-    try { weeklyComparisonChart.destroy(); } catch(e){/*ignore*/ }
-  }
-
-  const ctx = document.getElementById('weeklyComparisonChart').getContext('2d');
-  weeklyComparisonChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: '今日',
-          data: todayValues,
-          borderColor: 'rgba(52, 152, 219, 1)',
-          backgroundColor: 'rgba(52, 152, 219, 0.1)',
-          tension: 0.2,
-          fill: false,
-          pointRadius: 4,
-          borderWidth: 2
-        },
-        {
-          label: '先週の同じ曜日',
-          data: lastWeekValues,
-          borderColor: 'rgba(230, 126, 34, 1)',
-          backgroundColor: 'rgba(230, 126, 34, 0.1)',
-          tension: 0.2,
-          fill: false,
-          borderDash: [5, 5],
-          pointRadius: 3,
-          borderWidth: 1.5
+        title: {
+          display: true,
+          text: ${dayName} (${dateKey}) の現在人数推移
         }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: { display: true, text: '今日 vs 先週の同じ曜日' }
       },
       scales: {
-        y: { beginAtZero: true, title: { display: true, text: '人数' } }
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: '人数' }
+        }
       }
     }
   });
 }
 
+// === 各時間の入室累計最高値（棒） ===
+function renderHourlyChart(dayName, isToday, dateKey, labels, maxEnterArr) {
+  const canvas = document.getElementById('hourlyMaxChart');
+  if (!canvas) return;
 
-// =========================================================
-// === 3. 曜日・時間帯別 平均混雑状況 (統計) - 元のコードを保持 ===
-// =========================================================
-
-// fetch + parse
-async function fetchAndProcessStats() {
-  try {
-    const url = STATS_URL + '?mode=by_dow_hour';
-    const resp = await fetch(url, { cache: 'no-cache' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-
-    const data = await resp.json();
-    // If API returns { error: "..." }
-    if (data && data.error) throw new Error('API error: ' + data.error);
-
-    if (!data || !Array.isArray(data.by_dow_hour)) {
-      throw new Error("Invalid JSON: no 'by_dow_hour' array");
-    }
-
-    // normalize: ensure numeric types and map into simple structure
-    allStatsData = data.by_dow_hour.map(item => ({
-      hour: Number(item.hour),
-      dow: Number(item.dow),
-      avg_current: (item.avg_current === null || item.avg_current === '' ? null : Number(item.avg_current)),
-      max_current: (item.max_current === null || item.max_current === '' ? null : Number(item.max_current)),
-      samples: Number(item.samples || 0)
-    }));
-
-    document.getElementById('stats-status').textContent = '✅ 統計データを読み込みました。';
-
-    // 初期描画
-    const initialDow = parseInt(document.getElementById('dow-select').value);
-    renderStatsChart(Number.isNaN(initialDow) ? (new Date().getDay()||7) : initialDow);
-
-  } catch (err) {
-    console.error('fetchAndProcessStats error:', err);
-    const el = document.getElementById('stats-status');
-    if (el) el.textContent = '⚠️ 統計データ取得エラー: ' + (err.message || err);
-  }
-}
-
-// 描画関数（9〜19 を必ず表示する）
-function renderStatsChart(selectedDow) {
-  if (!Array.isArray(allStatsData) || allStatsData.length === 0) {
-    console.warn('no data to render');
-    return;
+  if (hourlyChart) {
+    try { hourlyChart.destroy(); } catch(e) {}
   }
 
-  // build buckets for hours 9..19 (to avoid missing-hour mismatch)
-  const hours = [];
-  for (let h = BUSINESS_START; h <= BUSINESS_END; h++) hours.push(h);
+  const ctx = canvas.getContext('2d');
 
-  // prepare arrays filled with nulls
-  const avgArr = hours.map(() => null);
-  const maxArr = hours.map(() => null);
-  const samplesArr = hours.map(() => 0);
+  const barData = maxEnterArr.map(v => v == null ? NaN : v);
 
-  // fill from data (multiple entries shouldn't exist for same dow/hour but merge if they do)
-  const filtered = allStatsData.filter(it => Number(it.dow) === Number(selectedDow));
-  filtered.forEach(it => {
-    if (it.hour < BUSINESS_START || it.hour > BUSINESS_END) return;
-    const idx = it.hour - BUSINESS_START;
-    // if multiple entries exist, take average of avg_current? We'll merge by weighted average:
-    if (it.avg_current !== null) {
-      if (avgArr[idx] === null) {
-        avgArr[idx] = it.avg_current;
-      } else {
-        // merge by simple average of the two values (or use samples weighting if you prefer)
-        avgArr[idx] = ( (avgArr[idx] || 0) + it.avg_current ) / 2;
-      }
-    }
-    if (it.max_current !== null) {
-      if (maxArr[idx] === null) maxArr[idx] = it.max_current;
-      else maxArr[idx] = Math.max(maxArr[idx], it.max_current);
-    }
-    samplesArr[idx] = (samplesArr[idx] || 0) + (Number(it.samples) || 0);
-  });
-
-  const labels = hours.map(h => `${h}:00`);
-  const avgData = avgArr.map(v => v === null ? NaN : v); // Chart.js treats NaN as gap
-  const maxData = maxArr.map(v => v === null ? NaN : v);
-
-  const dayName = DOW_MAP[selectedDow] || `曜日 ${selectedDow}`;
-
-  // destroy existing chart
-  if (statsChart) {
-    try { statsChart.destroy(); } catch(e){/*ignore*/ }
-  }
-
-  const ctx = document.getElementById('weeklyStatsChart').getContext('2d');
-  statsChart = new Chart(ctx, {
+  hourlyChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        {
-          label: '平均人数 (avg_current)',
-          data: avgData,
-          backgroundColor: avgData.map(v => isNaN(v) ? 'rgba(200,200,200,0.15)' : 'rgba(52,152,219,0.8)'),
-          borderColor: 'rgba(52,152,219,1)',
-          borderWidth: 1,
-          order: 2
-        },
-        {
-          label: '最大人数 (max_current)',
-          data: maxData,
-          type: 'line',
-          borderColor: 'rgba(231,76,60,1)',
-          backgroundColor: 'rgba(231,76,60,0.12)',
-          fill: true,
-          tension: 0.2,
-          order: 1
-        }
-      ]
+      datasets: [{
+        label: '各時間の入室累計の最高値',
+        data: barData,
+        backgroundColor: barData.map(v => isNaN(v) ? 'rgba(200,200,200,0.15)' : 'rgba(231,76,60,0.8)'),
+        borderColor: 'rgba(231,76,60,1)',
+        borderWidth: 1
+      }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: { display: true, text: `${dayName} の時間別 平均/最大混雑状況 (9:00〜19:00)` },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const idx = ctx.dataIndex;
-              const dsLabel = ctx.dataset.label || '';
-              const v = ctx.dataset.data[idx];
-              const valText = (v === null || isNaN(v)) ? 'データ無し' : `${v}`;
-              const samples = samplesArr[idx] || 0;
-              return `${dsLabel}: ${valText} （samples: ${samples}）`;
-            }
-          }
+        title: {
+          display: true,
+          text: ${dayName} (${dateKey}) の各時間 入室累計の最高値
         }
       },
       scales: {
-        y: { beginAtZero: true, title: { display: true, text: '人数' } }
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: '入室累計（人）' }
+        }
       }
     }
   });
+}
+
+function destroyCharts() {
+  if (liveChart) { try { liveChart.destroy(); } catch(e){} liveChart = null; }
+  if (hourlyChart) { try { hourlyChart.destroy(); } catch(e){} hourlyChart = null; }
 }
