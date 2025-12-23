@@ -1,270 +1,303 @@
-// === 設定 ===
-const STATS_URL = 'https://script.google.com/macros/s/XXXX/exec'; // ←あなたのURL
-const BUSINESS_START = 9;
-const BUSINESS_END = 19;
-const POLL_MS = 15000; // リアルタイム用ポーリング間隔
+// メニューデータ
+const menuData = [
+    {
+        title: "オニオングリルハンバーグ、枝豆コーンサラダ、ほうれん草ソテー、ポテトサラダ",
+        details: {
+            原材料: "オニオングリルハンバーグ[ハンバーグ(牛肉､たまねぎ､パン粉､その他)(国内製造)､野菜ブイヨンベース､カリフラワー､たまねぎ､ステーキソース､分離液状ドレッシング､フライドオニオン､香辛料]､ほうれん草ソテー(ほうれんそう､にんじん､たまねぎ､香味油､セロリ､粉末調味料､いりごま)､枝豆コーンサラダ(えだまめ､スイートコーン､マヨネーズ)､ポテトサラダ(ゆでじゃがいも､スクランブルエッグ､分離液状ドレッシング)／加工デンプン､増粘剤(加工デンプン､増粘多糖類)､調味料(アミノ酸等)､乳化剤､グリシン､酢酸Na､pH調整剤､リン酸塩(Na)､着色料(炭末､カロチノイド)､香料､酸化防止剤(V.E)､甘味料(ステビア)､香辛料抽出物",
+            紹介: "ふっくらジューシーなハンバーグは、玉ねぎの旨みが詰まったソースとベストマッチ！添え野菜のカリフラワーもソースに絡めて食べていただくのがおすすめです！ 副菜は、マヨネーズで和えた枝豆コーンサラダ、ほうれん草ソテー、卵入りのポテトサラダです。",
+            成分詳細: [
+                { name: "カロリー", value: "382kcal" },
+                { name: "たんぱく質", value: "17.2g" },
+                { name: "糖質", value: "20.5g" },
+                { name: "炭水化物", value: "(25g)" },
+                { name: "脂質", value: "24.6g" },
+                { name: "食物繊維", value: "4.5g" },
+                { name: "塩分", value: "2.4g" }
+            ]
+        }
+    },
+ {
+        title: "白身魚の生姜醤油､小松菜の和風サラダ､絹揚げ豆腐､大根とツナのタルタルあえ",
+        details: {
+            原材料: "白身魚の生姜醤油[パンガシウス(ベトナム産)､たまねぎ､ごぼう､和風だし､しゅんぎく､醤油だれ､からあげ粉､植物油､きざみしょうが､生姜醤油たれ､あんかけのたれ]､小松菜の和風サラダ[こまつな､パプリカ､分離液状ドレッシング]､大根とツナのタルタルあえ(だいこん､ツナ､タルタルソース)､絹揚げ豆腐(絹揚げ豆腐､みぞれたれ)／加工デンプン､増粘剤(加工デンプン､増粘多糖類)､調味料(アミノ酸等)､凝固剤､pH調整剤､酒精､甘味料(スクラロース､甘草)､酸味料､香辛料抽出物､着色料(カラメル､ウコン)､乳酸Ca､酸化防止剤(V.C)､V.B1､香料､ショウガ抽出物",
+            紹介: "白身魚のから揚げに、生姜の風味が特長の香り豊かな醤油だれで仕上げました。身も心も温まるようなおすすめの一品です。 添え野菜のささがきごぼう、玉ねぎの食感もぜひお楽しみください。 副菜は、ごましょうゆ味の小松菜の和風サラダ、おろしだれで和えた絹揚げ豆腐、大根とツナのタルタルあえです。 ",
+            成分詳細: [
+                { name: "カロリー", value: "237kcal" },
+                { name: "たんぱく質", value: "14g" },
+                { name: "糖質", value: "18g" },
+                { name: "炭水化物", value: "(21.6g)" },
+                { name: "脂質", value: "10.8g" },
+                { name: "食物繊維", value: "3.6g" },
+                { name: "塩分", value: "1.9g" }
+            ]
+        }
+    },
 
-const DOW_MAP = {1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日',7:'日曜日'};
+ {
+        title: "おろしソースのハンバーグ､椎茸ひじき､切干いんげん､コールスロー",
+        details: {
+            原材料: "おろしソースのハンバーグ[ハンバーグ{鶏肉､たまねぎ､豚脂､パン粉､粒状大豆たん白､その他}(国内製造)､ほうれんそう､おろしだれ､あんかけのたれ､葉ねぎ]､コールスロー(キャベツ､スイートコーン､マヨネーズ､味付ぽん酢)､椎茸ひじき(ひじき煮､しいたけ､にんじん､醤油だれ)､切干いんげん(切干大根煮､いんげん､だしつゆ､香辛料)／増粘剤(加工デンプン､増粘多糖類)､調味料(アミノ酸等)､酒精､ポリリン酸Na､酸味料､着色料(カラメル､カロチノイド)､甘味料(スクラロース､甘草)､保存料(ソルビン酸K)､pH調整剤､香料",
+            紹介: "和のシェフのこだわりを詰め込んだハンバーグが完成しました！ハンバーグは鶏肉と豚肉を独自の比率で合わせて柔らかく、旨みとコクのある美味しさに仕上げております。おろしソースでさっぱりと召し上がっていただきたいハンバーグです。 副菜は、椎茸ひじき、切干いんげん、コールスローです。 ",
+            成分詳細: [
+                { name: "カロリー", value: "300kcal" },
+                { name: "たんぱく質", value: "14.3g" },
+                { name: "糖質", value: "21.9g" },
+                { name: "炭水化物", value: "(27.4g)" },
+                { name: "脂質", value: "16.5g" },
+                { name: "食物繊維", value: "5.5g" },
+                { name: "塩分", value: "2.5g" }
+            ]
+        }
+    },
 
-let allRows = [];        // 生データ全部
-let liveChart = null;    // 現在人数の推移（折れ線）
-let hourlyChart = null;  // 各時間 入室累計の最高値（棒グラフ）
+    {
+        title: "チリハンバーグステーキ、彩り野菜、なすのバジルソース、そら豆のポテトサラダ",
+        details: {
+            原材料: "チリハンバーグステーキ[ハンバーグ(牛肉､たまねぎ､パン粉､その他)(国内製造)､チリソース､ブロッコリー]､そら豆のポテトサラダ(ゆでじゃがいも､そらまめ､マヨネーズ)､なすのバジルソース[揚げなす､たまねぎ､バジルソース]､彩り野菜(にんじん､パプリカ､植物油､粉末調味料)／加工デンプン､調味料(アミノ酸等)､増粘剤(加工デンプン､増粘多糖類)､乳化剤､クエン酸､着色料(カラメル､カロチノイド､炭末)､pH調整剤､香辛料抽出物､リン酸塩(Na)､香料",
+            紹介: "メニューの中でも大人気のチリハンバーグステーキです。肉汁をギュッと閉じ込めたジューシーなハンバーグは、噛むほどに肉の旨味が広がり絶品です。辛さ控えめのチリソースが、さらに美味しさを引き立てています。副菜は、彩り野菜、なすのバジルソース、そら豆のポテトサラダです。",
+            成分詳細: [
+                { name: "カロリー", value: "368kcal" },
+                { name: "たんぱく質", value: "15.2g" },
+                { name: "糖質", value: "21.9g" },
+                { name: "炭水化物", value: "(25.7g)" },
+                { name: "脂質", value: "23.3g" },
+                { name: "食物繊維", value: "3.8g" },
+                { name: "塩分", value: "2.5g" }
+            ]
+        }
+    },
+ {
+        title: "きのことチーズのトマトハンバーグ､枝豆と鶏肉の洋風あえ､人参のガーリックバター､コールスローサラダ",
+        details: {
+            原材料: "きのことチーズのトマトハンバーグ[ハンバーグ(鶏肉､植物性たん白､たまねぎ､パン粉､牛脂､その他)(国内製造)､トマトソース､きのこ(ぶなしめじ､まいたけ､しいたけ)､ナチュラルチーズ､たまねぎ､粉末調味料]､コールスローサラダ(スイートコーン､キャベツ､乳化液状ドレッシング､パプリカ)､枝豆と鶏肉の洋風あえ(えだまめ､チキンフレーク､香味油､風味調味料)､人参のガーリックバター(にんじん､ガーリックバターソース､粒状植物性たんぱく､フライドオニオン)／調味料(アミノ酸等)､増粘剤(加工デンプン､増粘多糖類)､加工デンプン､着色料(カラメル､ベニコウジ､クチナシ)､リン酸塩(Na)､セルロース､pH調整剤､塩化Ca､酸味料､香料､甘味料(ステビア)､香辛料抽出物､乳化剤､酸化防止剤(V.E)",
+            紹介: "世代を問わず愛され続けるトマトソースのハンバーグ！やわらかいジューシーなハンバーグに3種類のきのことチーズをトッピングし、まろやかな酸味のトマトソースで仕上げました。たっぷりのきのこの香りが食欲をそそり、チーズのコク深さと真っ赤に熟したトマトソースの酸味がハンバーグの旨みを引き立てます！ 副菜は、枝豆と鶏肉の洋風あえ、人参のガーリックバター、コーンとパプリカが入ったコールスローサラダです。 ",
+            成分詳細: [
+                { name: "カロリー", value: "366kcal" },
+                { name: "たんぱく質", value: "19.5g" },
+                { name: "糖質", value: "17g" },
+                { name: "炭水化物", value: "(23g)" },
+                { name: "脂質", value: "22.2g" },
+                { name: "食物繊維", value: "6g" },
+                { name: "塩分", value: "2.2g" }
+            ]
+        }
+    },
 
-// === 初期化 ===
+ {
+        title: "回鍋肉､もやしと卵の和え物､焼売､白菜のスイートチリ",
+        details: {
+            原材料: "回鍋肉[キャベツ(国産)､豚肉､回鍋肉の素､葉ねぎ､にんにくの芽､香味油､鶏ガラスープベース､大豆発酵調味料]､焼売､もやしと卵の和え物(もやし､鶏卵加工品､中華調味料)､白菜のスイートチリ(はくさい､スイートチリソース､アーモンド)／加工デンプン､増粘剤(セルロース､加工デンプン､増粘多糖類)､調味料(アミノ酸等)､ソルビトール､グリセリン､着色料(カラメル､カロチノイド)､グリセリン脂肪酸エステル､リン酸Na､酸味料､酸化防止剤(V.E､V.C)､香辛料抽出物",
+            紹介: "厚めで食べ応え十分の豚肉に、甘み豊かなキャベツと歯ざわりの良いにんにくの芽をたっぷりと合わせました。豆板醤のピリッとした辛味と濃厚でコク深い特製だれが食欲をそそる一品です。 豚肉と野菜を一緒にお楽しみいただきたい一皿です。 副菜は、シャキシャキ感が心地よいもやしと卵の和え物、ジューシーな焼売、アーモンドをアクセントにした白菜のスイートチリです。",
+            成分詳細: [
+                { name: "カロリー", value: "427kcal" },
+                { name: "たんぱく質", value: "15g" },
+                { name: "糖質", value: "17.9g" },
+                { name: "炭水化物", value: "(21.4g)" },
+                { name: "脂質", value: "32.9g" },
+                { name: "食物繊維", value: "3.5g" },
+                { name: "塩分", value: "2.3g" }
+            ]
+        }
+    },
+
+ {
+        title: "ハンバーグと彩り温野菜のデミ､かぼちゃサラダ､ほうれん草のソテー､ズッキーニエッグ",
+        details: {
+            原材料: "ハンバーグと彩り温野菜のデミ{ハンバーグ(鶏肉､植物性たん白､たまねぎ､パン粉､牛脂､その他)(国内製造)､デミグラスソース､野菜[ブロッコリー､スイートコーン､パプリカ]}､かぼちゃサラダ(かぼちゃ､ホワイトソース､チキンコンソメ､香辛料)､ほうれん草のソテー(ほうれんそう､香味油､鶏ガラだし)､ズッキーニエッグ(ズッキーニ､マヨネーズ､スクランブルエッグ､粒マスタード)／調味料(アミノ酸等)､増粘剤(加工デンプン､増粘多糖類)､着色料(カラメル､カロチノイド､ウコン)､トレハロース､リン酸塩(Na)､加工デンプン､乳化剤､グリシン､pH調整剤､香辛料抽出物､酸味料､香料､シリコーン",
+            紹介: "人気定番のハンバーグメニューが、付け合わせと副菜をブラッシュアップし、さらに彩りも豊かになりリニューアル！付け合わせをコーンにすることで、柔らかいふわふわのハンバーグに食感をプラス。コーンの甘みが濃厚なデミソースのコクを引き立てます！かぼちゃはホワイトソースと合わせてサラダにすることで、より素材のうまみを引き出しました。見た目も美味しさもこだわりぬいた逸品となっております！ 副菜は、クリーミーなかぼちゃサラダ、鶏ガラ風味のほうれん草のソテー、粒マスタードが隠し味のズッキーニエッグです。",
+            成分詳細: [
+                { name: "カロリー", value: "338kcal" },
+                { name: "たんぱく質", value: "14.8g" },
+                { name: "糖質", value: "20g" },
+                { name: "脂質", value: "19.9g" },
+                { name: "食物繊維", value: "6g" },
+                { name: "塩分", value: "2.4g" }
+            ]
+        }
+    },
+    {
+        title: "コクと旨味のスイートチリカラアゲ、じゃがいもの旨塩、枝豆のカレー風味、コーンとオクラの生姜醤油",
+        details: {
+            原材料: "コクと旨味のスイートチリカラアゲ[鶏肉(タイ産)､キャベツ､甘酢あん､たまねぎ､からあげ粉､植物油､スイートチリソース､トマトスープの素]､枝豆のカレー風味(えだまめ､カレーソース､チキンフレーク､粉末しょうゆ調味料)､じゃがいもの旨塩(じゃがいも､グリーンピース､中華調味料)､コーンとオクラの生姜醤油(スイートコーン､オクラ､生姜醤油たれ)／加工デンプン､増粘剤(加工デンプン､増粘多糖類)､調味料(アミノ酸等)､カラメル色素､酸味料､酸化防止剤(V.E､V.C)､V.B1､香辛料抽出物､香料",
+            紹介: "トマトの甘みをまとったスイートチリソースを開発！コクと旨みのあるソースは、カラアゲメニューとの相性抜群です。カラアゲはもちろん、添え野菜にもソースをたっぷりと絡めて召し上がってほしい一品です。 副菜は、じゃがいもの旨塩、枝豆のカレー風味、コーンとオクラの生姜醤油です。",
+            成分詳細: [
+                { name: "カロリー", value: "393kcal" },
+                { name: "たんぱく質", value: "24.1g" },
+                { name: "糖質", value: "29.2g" },
+                { name: "炭水化物", value: "(32.8g)" },
+                { name: "脂質", value: "19.6g" },
+                { name: "食物繊維", value: "3.6g" },
+                { name: "塩分", value: "1.9g" }
+            ]
+        }
+    }
+];
+
+// メニューコンテナとタブ名
+const menuContainer = document.getElementById('menu-container');
+const tabNames = [
+    { key: "メニュー詳細", label: "メニュー詳細" },
+    { key: "原材料", label: "原材料" },
+    { key: "紹介", label: "紹介" },
+    { key: "成分詳細", label: "成分詳細" }
+];
+
+// ページのロード時にメニューを生成
 document.addEventListener('DOMContentLoaded', () => {
-  const selectElement = document.getElementById('dow-select');
+    // ローディングメッセージを削除
+    const loadingMessage = document.querySelector('.loading-message');
+    if (loadingMessage) loadingMessage.remove();
 
-  // 今日の曜日 (JS:0=日→7に変換)
-  const jsDow = new Date().getDay();
-  const todayDow = (jsDow === 0 ? 7 : jsDow);
-
-  if (selectElement) {
-    selectElement.value = String(todayDow);
-    selectElement.addEventListener('change', () => {
-      const v = parseInt(selectElement.value);
-      const dow = Number.isNaN(v) ? todayDow : v;
-      renderForDow(dow);
+    menuData.forEach((menu, index) => {
+        const menuItem = createMenuItem(menu, index);
+        menuContainer.appendChild(menuItem);
     });
-  }
-
-  // 初回取得
-  fetchAndProcess();
-
-  // ポーリングでリアルタイム更新（当日の曜日のみ効いてくる）
-  setInterval(fetchAndProcess, POLL_MS);
 });
 
-// === API から行データ取得 ===
-async function fetchAndProcess() {
-  try {
-    const resp = await fetch(STATS_URL + '?mode=raw', { cache: 'no-cache' }); // mode は自分の GAS に合わせる
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+/**
+ * 個別のメニューアイテムのDOM要素を作成する
+ */
+function createMenuItem(menu, index) {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'menu-item';
+    itemDiv.id = `menu-item-${index}`;
+    
+    // メニュータイトル
+    const titleH2 = document.createElement('h2');
+    titleH2.className = 'menu-title';
+    titleH2.textContent = `メニュー${index + 1}: ${menu.title}`;
+    itemDiv.appendChild(titleH2);
 
-    const data = await resp.json();
-    if (!data || !Array.isArray(data.rows)) {
-      throw new Error("Invalid JSON: no 'rows' array");
+    // タブボタンエリア
+    const tabButtonsDiv = document.createElement('div');
+    tabButtonsDiv.className = 'tab-buttons';
+    tabButtonsDiv.setAttribute('role', 'tablist');
+    itemDiv.appendChild(tabButtonsDiv);
+
+    // タブコンテンツエリア
+    const tabContentDiv = document.createElement('div');
+    tabContentDiv.className = 'tab-content';
+    itemDiv.appendChild(tabContentDiv);
+
+    tabNames.forEach((tab, tabIndex) => {
+        // --- タブボタンの生成 ---
+        const button = document.createElement('button');
+        button.className = 'tab-button';
+        button.textContent = tab.label;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-controls', `panel-${index}-${tab.key}`);
+        button.setAttribute('data-tab-key', tab.key);
+        button.onclick = () => switchTab(itemDiv.id, tab.key);
+        tabButtonsDiv.appendChild(button);
+
+        // --- タブコンテンツセクションの生成 ---
+        const section = document.createElement('div');
+        section.className = 'content-section';
+        section.setAttribute('id', `panel-${index}-${tab.key}`);
+        section.setAttribute('role', 'tabpanel');
+        section.setAttribute('aria-labelledby', `tab-${index}-${tab.key}`);
+        
+        // コンテンツを挿入
+        insertTabContent(section, tab.key, menu.details, menu.title);
+        
+        tabContentDiv.appendChild(section);
+
+        // 最初のタブをアクティブにする
+        if (tabIndex === 0) {
+            button.classList.add('active');
+            button.setAttribute('aria-selected', 'true');
+            section.classList.add('active');
+        } else {
+             button.setAttribute('aria-selected', 'false');
+             section.setAttribute('hidden', 'true'); // 非アクティブなものは非表示
+        }
+    });
+
+    return itemDiv;
+}
+
+/**
+ * タブの内容を適切な形式でDOM要素に挿入する
+ */
+function insertTabContent(section, tabKey, details, menuTitle) {
+    if (tabKey === "メニュー詳細") {
+        const mainContent = menuTitle.split(/､|、/)[0]; // 最初の項目をメインメニューと仮定
+        const sideContent = menuTitle.split(/､|、/).slice(1).join('、');
+
+        section.innerHTML = `
+            <h3>メインメニュー</h3>
+            <p>**${mainContent}**</p>
+            <h3>副菜</h3>
+            <p>${sideContent}</p>
+        `;
+
+    } else if (tabKey === "原材料") {
+        // 原材料は、区切り文字を改行に置き換えて見やすくする
+        const formattedRawMaterials = details.原材料.replace(/、/g, '、<br>').replace(/／/g, '<br><br>**添加物等**／');
+        section.innerHTML = `
+            <h3>原材料名</h3>
+            <p>${formattedRawMaterials}</p>
+        `;
+
+    } else if (tabKey === "紹介") {
+        const [introText, noteText] = details.紹介.split('＊レンジ加熱時に');
+        
+        section.innerHTML = `
+            <h3>商品の特徴</h3>
+            <p>${introText.trim()}</p>
+            ${noteText ? `<p class="note">**重要なお知らせ（調理注意）**<br>＊レンジ加熱時に${noteText.trim()}</p>` : ''}
+        `;
+
+    } else if (tabKey === "成分詳細") {
+        // 成分詳細 (テーブル形式で表示)
+        let tableHTML = '<table class="nutrition-table" role="presentation"><tbody>';
+        details.成分詳細.forEach(item => {
+            // 炭水化物や糖質の表記を強調
+            const isCarbOrSugar = item.name.includes('糖質') || item.name.includes('炭水化物');
+            const thClass = isCarbOrSugar ? ' class="highlight"' : '';
+            
+            tableHTML += `
+                <tr>
+                    <th${thClass}>${item.name}</th>
+                    <td>${item.value}</td>
+                </tr>
+            `;
+        });
+        tableHTML += '</tbody></table>';
+        section.innerHTML = `
+            <h3>栄養成分情報 (1食あたり)</h3>
+            ${tableHTML}
+            <p style="margin-top: 15px; font-size: 0.9em; color: #777;">※ ( ) 内は炭水化物に含まれるものです。</p>
+        `;
     }
-
-    // 正規化
-    allRows = data.rows.map(normalizeRow).filter(r => r !== null);
-
-    const status = document.getElementById('stats-status');
-    if (status) status.textContent = '✅ データ更新: ' + new Date().toLocaleTimeString();
-
-    // 現在選択中の曜日で描画
-    const selEl = document.getElementById('dow-select');
-    const jsDow = new Date().getDay();
-    const todayDow = (jsDow === 0 ? 7 : jsDow);
-    const rawSel = selEl ? parseInt(selEl.value) : todayDow;
-    const dow = Number.isNaN(rawSel) ? todayDow : rawSel;
-    renderForDow(dow);
-
-  } catch (e) {
-    console.error('fetchAndProcess error', e);
-    const status = document.getElementById('stats-status');
-    if (status) status.textContent = '⚠️ データ取得エラー: ' + (e.message || e);
-  }
 }
 
-// === 1行をスプレッドシートの列に合わせて整形 ===
-function normalizeRow(item) {
-  try {
-    // ここはあなたの Apps Script / シート列名に合わせて変更
-    const timeStr = item.record_time || item.記録時刻 || item.timestamp || item.slot15;
-    const enterCum = Number(item.enter_cum ?? item.入室累計 ?? 0);
-    const current = Number(item.current ?? item.現在人数 ?? 0);
-    const dow = Number(item.dow ?? item.曜日);
-    const hour = Number(item.hour ?? item.時);
-    const slotStr = item.slot15 ?? item['時刻15分'] ?? timeStr;
+/**
+ * タブを切り替える
+ */
+function switchTab(itemId, tabKey) {
+    const itemDiv = document.getElementById(itemId);
+    
+    // すべてのボタンとコンテンツの 'active' 状態と aria 属性をリセット
+    itemDiv.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+    });
+    itemDiv.querySelectorAll('.content-section').forEach(content => {
+        content.classList.remove('active');
+        content.setAttribute('hidden', 'true');
+    });
 
-    if (!timeStr || isNaN(dow) || isNaN(hour)) return null;
+    // 選択されたタブ要素を取得
+    const activeButton = itemDiv.querySelector(`.tab-button[data-tab-key="${tabKey}"]`);
+    const activeContent = itemDiv.querySelector(`.content-section[id="panel-${itemId.split('-')[2]}-${tabKey}"]`);
 
-    // 日付キー (YYYY-MM-DD) を文字列から抜く
-    const m = String(timeStr).match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
-    if (!m) return null;
-    const dateKey = `${m[1]}-${m[2]}-${m[3]}`;
+    // 選択されたタブ要素をアクティブにする
+    if (activeButton && activeContent) {
+        activeButton.classList.add('active');
+        activeButton.setAttribute('aria-selected', 'true');
 
-    // JS Date に変換（ブラウザのローカルタイムでOKとする）
-    const ts = new Date(timeStr);
-    const slotDate = new Date(slotStr);
-
-    return {
-      ts,
-      slotDate,
-      dateKey,
-      dow,
-      hour,
-      enterCum,
-      current
-    };
-  } catch (e) {
-    console.warn('normalizeRow error', e, item);
-    return null;
-  }
-}
-
-// === 曜日ごとの表示ロジック ===
-function renderForDow(selectedDow) {
-  if (!allRows.length) return;
-
-  const now = new Date();
-  const jsDow = now.getDay();
-  const todayDow = (jsDow === 0 ? 7 : jsDow);
-
-  // 曜日ごとに dateKey を集計
-  const rowsSameDow = allRows.filter(r => r.dow === selectedDow);
-  if (!rowsSameDow.length) {
-    console.warn('no data for dow', selectedDow);
-    destroyCharts();
-    return;
-  }
-
-  // dateKeyごとにグループ化
-  const byDate = {};
-  for (const r of rowsSameDow) {
-    (byDate[r.dateKey] ??= []).push(r);
-  }
-  const dateKeys = Object.keys(byDate).sort(); // 昇順（古い→新しい）
-
-  // 今日の日付キー（normalizeRow で作った形式と合わせる）
-  const todayKeyMatch = now.toISOString().slice(0,10); // "YYYY-MM-DD"
-
-  let useDateKey;
-
-  if (selectedDow === todayDow && byDate[todayKeyMatch]) {
-    // ★ 条件1: 当日の曜日なら、その日のデータ（リアルタイムに増えていく想定）
-    useDateKey = todayKeyMatch;
-  } else {
-    // ★ 条件2: それ以外は「一番近いその曜日のグラフ」= 最も新しい dateKey
-    useDateKey = dateKeys[dateKeys.length - 1];
-  }
-
-  const rows = byDate[useDateKey] || [];
-  if (!rows.length) {
-    console.warn('no rows for chosen dateKey', useDateKey);
-    destroyCharts();
-    return;
-  }
-
-  // 時刻順にソート
-  rows.sort((a,b) => a.ts - b.ts);
-
-  // ---- グラフ用データ作成 ----
-
-  // ① 現在人数の推移（折れ線）
-  const liveLabels = rows.map(r =>
-    r.slotDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  );
-  const liveData = rows.map(r => r.current);
-
-  // ② 各時間の入室累計の最高値（棒）
-  const hours = [];
-  for (let h = BUSINESS_START; h <= BUSINESS_END; h++) hours.push(h);
-
-  const hourlyMaxEnter = hours.map(h => {
-    const inHour = rows.filter(r => r.hour === h);
-    if (!inHour.length) return null;
-    return Math.max(...inHour.map(r => r.enterCum));
-  });
-
-  const hourlyLabels = hours.map(h => `${h}:00`);
-
-  const dayName = DOW_MAP[selectedDow] || `曜日 ${selectedDow}`;
-  const isToday = (selectedDow === todayDow && useDateKey === todayKeyMatch);
-
-  renderLiveChart(dayName, isToday, useDateKey, liveLabels, liveData);
-  renderHourlyChart(dayName, isToday, useDateKey, hourlyLabels, hourlyMaxEnter);
-}
-
-// === 現在人数の推移（折れ線） ===
-function renderLiveChart(dayName, isToday, dateKey, labels, data) {
-  const canvas = document.getElementById('liveChart');
-  if (!canvas) return;
-
-  if (liveChart) {
-    try { liveChart.destroy(); } catch(e) {}
-  }
-
-  const ctx = canvas.getContext('2d');
-
-  liveChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: isToday ? '現在人数（リアルタイム）' : '現在人数（過去データ）',
-        data,
-        borderColor: 'rgba(52,152,219,1)',
-        backgroundColor: 'rgba(52,152,219,0.12)',
-        fill: true,
-        tension: 0.2,
-        pointRadius: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: {
-          display: true,
-          text: ${dayName} (${dateKey}) の現在人数推移
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: '人数' }
-        }
-      }
+        activeContent.classList.add('active');
+        activeContent.removeAttribute('hidden');
     }
-  });
-}
-
-// === 各時間の入室累計最高値（棒） ===
-function renderHourlyChart(dayName, isToday, dateKey, labels, maxEnterArr) {
-  const canvas = document.getElementById('hourlyMaxChart');
-  if (!canvas) return;
-
-  if (hourlyChart) {
-    try { hourlyChart.destroy(); } catch(e) {}
-  }
-
-  const ctx = canvas.getContext('2d');
-
-  const barData = maxEnterArr.map(v => v == null ? NaN : v);
-
-  hourlyChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: '各時間の入室累計の最高値',
-        data: barData,
-        backgroundColor: barData.map(v => isNaN(v) ? 'rgba(200,200,200,0.15)' : 'rgba(231,76,60,0.8)'),
-        borderColor: 'rgba(231,76,60,1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: {
-          display: true,
-          text: ${dayName} (${dateKey}) の各時間 入室累計の最高値
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: '入室累計（人）' }
-        }
-      }
-    }
-  });
-}
-
-function destroyCharts() {
-  if (liveChart) { try { liveChart.destroy(); } catch(e){} liveChart = null; }
-  if (hourlyChart) { try { hourlyChart.destroy(); } catch(e){} hourlyChart = null; }
 }
