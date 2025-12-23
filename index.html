@@ -1,64 +1,28 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ジム混雑状況ダッシュボード</title>
-    <link rel="stylesheet" href="style.css" />
-
-    <!-- Chart.js（1回だけ UMD ビルド） -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プロフェッショナルメニュー詳細</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <div class="container">
-        <h1>🏋️ ジム混雑状況ダッシュボード 🚀</h1>
-        
-        <!-- 今日の混雑 -->
-        <div class="graph-card">
-            <h2>📊 現在の混雑状況 (今日)</h2>
-            <div class="graph-area" style="height: 300px;">
-                <canvas id="todayCrowdChart"></canvas>
-            </div>
-            <p id="today-status" class="status-text">データを読み込み中です...</p>
-        </div>
 
-        <!-- 先週の同じ曜日比較 -->
-        <div class="graph-card">
-            <h2>📈 前週の同じ曜日の混雑状況 (比較)</h2>
-            <div class="graph-area" style="height: 300px;">
-                <canvas id="weeklyComparisonChart"></canvas>
-            </div>
-            <p id="weekly-status" class="status-text">データを読み込み中です...</p>
-        </div>
+    <header class="site-header">
+        <h1>🍱 商品メニュー詳細</h1>
+    </header>
 
-        <hr />
+    <main id="menu-container" class="container">
+        <p class="loading-message">メニュー情報をロード中です...</p>
+    </main>
 
-        <!-- 曜日 × 時間帯統計 -->
-        <div class="graph-card-full">
-            <h2>🗓️ 曜日・時間帯別 平均混雑状況 (統計)</h2>
-            
-            <div style="text-align: center; margin-bottom: 20px;">
-                <label><b>表示する曜日：</b></label>
-                <select id="dow-select">
-                    <option value="1">月曜日</option>
-                    <option value="2">火曜日</option>
-                    <option value="3">水曜日</option>
-                    <option value="4">木曜日</option>
-                    <option value="5">金曜日</option>
-                    <option value="6">土曜日</option>
-                    <option value="7">日曜日</option>
-                </select>
-            </div>
+    <footer class="site-footer">
+        <p>&copy; 2025 Menu Details Site</p>
+    </footer>
 
-            <div class="graph-area" style="height: 400px;">
-                <canvas id="weeklyStatsChart"></canvas>
-            </div>
-            <p id="stats-status" class="status-text">統計データを読み込み中です...</p>
-        </div>
-    </div>
-
-    <!-- あなたのグラフ生成ロジック（後述の完全版 script.js） -->
     <script src="script.js"></script>
 </body>
 </html>
