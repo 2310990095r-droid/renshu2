@@ -228,12 +228,14 @@ function insertTabContent(section, tabKey, details, menuTitle) {
         `;
 
     } else if (tabKey === "原材料") {
+        // --- 修正箇所: 階層構造への変更ロジック ---
+        
         // 1. まず「／」で区切って、主原料と添加物を分ける
         const parts = details.原材料.split('／');
         const mainIngredients = parts[0]; // ／の前（主原料）
         const additives = parts[1];       // ／の後（添加物）
 
-        // 2. カッコ内のカンマを無視して分割する関数
+        // カッコ内のカンマを無視して分割する共通関数
         const splitItems = (text) => {
             if (!text) return [];
             const result = [];
@@ -241,12 +243,10 @@ function insertTabContent(section, tabKey, details, menuTitle) {
             let current = "";
 
             for (let char of text) {
-                // 開きカッコならレベルを上げる
                 if (['(', '（', '[', '{'].includes(char)) level++;
-                // 閉じカッコならレベルを下げる
                 if ([')', '）', ']', '}'].includes(char)) level--;
 
-                // カッコの外（levelが0）で、かつ区切り文字（、や､）の場合のみ分割
+                // カッコの外（levelが0）で、かつ区切り文字の場合
                 if (level === 0 && (char === '、' || char === '､')) {
                     if (current.trim()) result.push(current.trim());
                     current = "";
@@ -254,28 +254,66 @@ function insertTabContent(section, tabKey, details, menuTitle) {
                     current += char;
                 }
             }
-            // 最後の要素を追加
             if (current.trim()) result.push(current.trim());
             return result;
         };
 
-        // 3. HTMLの生成（リスト形式にする）
-        const generateListHTML = (items) => {
-            if (items.length === 0) return "";
-            return `<ul class="ingredient-list">` + 
-                   items.map(item => `<li>${item}</li>`).join('') + 
-                   `</ul>`;
-        };
-
         let htmlContent = `<h3>原材料名</h3>`;
-        
-        // 主原料リスト
-        htmlContent += generateListHTML(splitItems(mainIngredients));
 
-        // 添加物がある場合のみ表示
+        // 2. 主原料を「料理名」と「中身」に分解して表示
+        const dishes = splitItems(mainIngredients);
+
+        dishes.forEach(dish => {
+            let dishTitle = dish;
+            let subItems = [];
+
+            // Pattern A: DishName[Item1, Item2...]
+            if (dish.includes('[')) {
+                const openIndex = dish.indexOf('[');
+                const closeIndex = dish.lastIndexOf(']');
+                if (openIndex > -1 && closeIndex > openIndex) {
+                    dishTitle = dish.substring(0, openIndex);
+                    const content = dish.substring(openIndex + 1, closeIndex);
+                    subItems = splitItems(content);
+                }
+            } 
+            // Pattern B: DishName(Item1, Item2...) 
+            // ※ただし、[ ]の中にいない場合に限る
+            else if (dish.includes('(')) {
+                const openIndex = dish.indexOf('(');
+                const closeIndex = dish.lastIndexOf(')');
+                if (openIndex > -1 && closeIndex > openIndex) {
+                    dishTitle = dish.substring(0, openIndex);
+                    const content = dish.substring(openIndex + 1, closeIndex);
+                    subItems = splitItems(content);
+                }
+            }
+
+            // HTML生成
+            htmlContent += `<div class="ingredient-group">`;
+            htmlContent += `<div class="ingredient-title">${dishTitle}</div>`;
+            
+            if (subItems.length > 0) {
+                htmlContent += `<ul class="sub-ingredient-list">`;
+                subItems.forEach(item => {
+                    // (国内製造) などの補足を改行せず、文字列置換で見やすくする場合（任意）
+                    // 例: item = item.replace('(国内製造)', ' <small>※国内製造</small>');
+                    htmlContent += `<li>${item}</li>`;
+                });
+                htmlContent += `</ul>`;
+            }
+            htmlContent += `</div>`;
+        });
+
+        // 3. 添加物がある場合
         if (additives) {
-            htmlContent += `<p style="margin-top: 20px; font-weight: bold;">添加物等</p>`;
-            htmlContent += generateListHTML(splitItems(additives));
+            htmlContent += `<p class="additives-title">添加物等</p>`;
+            htmlContent += `<ul class="sub-ingredient-list">`; 
+            const additiveList = splitItems(additives);
+            additiveList.forEach(item => {
+                 htmlContent += `<li>${item}</li>`;
+            });
+            htmlContent += `</ul>`;
         }
 
         section.innerHTML = htmlContent;
@@ -293,7 +331,6 @@ function insertTabContent(section, tabKey, details, menuTitle) {
         // 成分詳細 (テーブル形式で表示)
         let tableHTML = '<table class="nutrition-table" role="presentation"><tbody>';
         details.成分詳細.forEach(item => {
-            // 炭水化物や糖質の表記を強調
             const isCarbOrSugar = item.name.includes('糖質') || item.name.includes('炭水化物');
             const thClass = isCarbOrSugar ? ' class="highlight"' : '';
             
