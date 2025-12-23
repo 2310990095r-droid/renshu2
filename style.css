@@ -174,3 +174,15 @@ body {
     margin-top: 40px;
     font-size: 0.9em;
 }
+
+/* --- 追加: 原材料リストのスタイル --- */
+.ingredient-list {
+    list-style-type: disc; /* 黒丸（・）を表示 */
+    padding-left: 20px;    /* インデント */
+    margin: 10px 0;
+}
+
+.ingredient-list li {
+    margin-bottom: 5px;    /* 行間を少し空ける */
+    line-height: 1.5;
+}
