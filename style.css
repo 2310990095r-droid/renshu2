@@ -186,3 +186,45 @@ body {
     margin-bottom: 5px;    /* 行間を少し空ける */
     line-height: 1.5;
 }
+
+/* --- 原材料リストの階層表示用スタイル --- */
+.ingredient-group {
+    margin-bottom: 15px;
+}
+
+.ingredient-title {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: baseline;
+}
+
+/* 親項目の「・」を疑似要素で作る */
+.ingredient-title::before {
+    content: "・";
+    margin-right: 5px;
+    font-weight: bold;
+}
+
+/* 子リスト（インデントをつける） */
+.sub-ingredient-list {
+    list-style-type: none; /* デフォルトの黒丸を消す */
+    padding-left: 1.5em;   /* インデント */
+    margin: 0;
+}
+
+.sub-ingredient-list li {
+    margin-bottom: 3px;
+    font-size: 0.95em;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* 添加物エリア */
+.additives-title {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+    font-weight: bold;
+}
