@@ -228,3 +228,12 @@ body {
     border-top: 1px dashed #ccc;
     font-weight: bold;
 }
+
+/* ■■■ メニュー画像のスタイル ■■■ */
+.menu-image {
+    width: 100%;       /* 横幅いっぱいに広げる */
+    height: 250px;     /* 高さを固定 */
+    object-fit: cover; /* 画像の比率を保ったままトリミングして表示 */
+    display: block;    /* 隙間をなくす */
+    border-bottom: 1px solid var(--color-border); /* 下に線を引く */
+}
